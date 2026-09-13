@@ -12,7 +12,10 @@ export function ExceptionCard({ site, rank }: ExceptionCardProps) {
   const deviationFormatted = site.deviationSignedStr;
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200/90 p-7 shadow-xs hover:border-stone-300 transition-colors">
+    <div
+      id={`carpark-site-${site.id}`}
+      className="bg-white rounded-xl border border-stone-200/90 p-7 shadow-xs hover:border-stone-300 transition-colors"
+    >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">

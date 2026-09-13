@@ -6,6 +6,7 @@ import { ExceptionCard } from "./components/ExceptionCard";
 import { QuietRankedList } from "./components/QuietRankedList";
 import { LoadingView, EmptyView, RefusedView, UnreachableView } from "./components/StateViews";
 import { NotifyForm } from "./components/NotifyForm";
+import { CarparkSearch } from "./components/CarparkSearch";
 import { Footer } from "./components/Footer";
 import { Radio, Layers } from "lucide-react";
 
@@ -180,6 +181,19 @@ export default function App() {
 
       {/* Main Single-Screen Exception Board */}
       <main className="max-w-5xl mx-auto w-full px-6 py-8 flex-1">
+        {/* Carpark Search Bar: Available across all modes */}
+        <CarparkSearch
+          flaggedSites={data ? data.flaggedExceptions : getScenarioData("flagged").flaggedExceptions}
+          quietList={data ? data.quietList : getScenarioData("flagged").quietList}
+          missingSites={data ? data.missingSites : getScenarioData("flagged").missingSites}
+          onSelectSite={(id) => {
+            const el = document.getElementById(`carpark-site-${id}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }}
+        />
+
         {/* Loading State Sentence */}
         {boardState === "loading" && <LoadingView />}
 

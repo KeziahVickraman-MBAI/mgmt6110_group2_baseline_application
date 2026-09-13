@@ -38,7 +38,11 @@ export function QuietRankedList({ quietList, missingSites, omittedSites }: Quiet
             {quietList.map((site) => {
               const isDeficit = site.deviation < 0;
               return (
-                <tr key={site.id} className="hover:bg-stone-50/60 transition-colors">
+                <tr
+                  key={site.id}
+                  id={`carpark-site-${site.id}`}
+                  className="hover:bg-stone-50/60 transition-colors"
+                >
                   <td className="py-2.5 px-3.5 font-medium text-stone-900">
                     {site.development}
                   </td>
