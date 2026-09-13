@@ -192,6 +192,12 @@ export async function computeDeviations() {
     const expectedOccupancy = Number((baselineRate * rainFactor).toFixed(4));
     const actualOccupancy = site.occupancyRate;
 
+    // Lots affected calculation (cars above or below expected)
+    const actualLotsOccupied = site.totalLots - site.lotsAvailable;
+    const expectedLotsOccupied = Math.round(expectedOccupancy * site.totalLots);
+    const carsDiff = actualLotsOccupied - expectedLotsOccupied; // > 0 = above normal, < 0 = below normal
+    const absCarsDiff = Math.abs(carsDiff);
+
     // Deviation = (actual occupancy - expected occupancy) / expected occupancy, signed percentage
     const deviation = expectedOccupancy > 0 
       ? (actualOccupancy - expectedOccupancy) / expectedOccupancy 
@@ -200,10 +206,25 @@ export async function computeDeviations() {
     const deviationPercent = Math.round(deviation * 100);
     const absDeviation = Math.abs(deviation);
 
+    // Direction and Headline figures
+    let direction = "normal";
+    let carsHeadline = "Normal occupancy";
+    let actionText = "Monitor site.";
+
+    if (carsDiff > 0) {
+      direction = "above";
+      carsHeadline = `${carsDiff.toLocaleString()} cars above normal`;
+      actionText = "Send someone.";
+    } else if (carsDiff < 0) {
+      direction = "below";
+      carsHeadline = `${absCarsDiff.toLocaleString()} cars below normal`;
+      actionText = "Floater available here.";
+    }
+
     // Build plain sentence
     const absPercent = Math.abs(deviationPercent);
-    const direction = deviation >= 0 ? "above" : "below";
-    let plainSentence = `running ${absPercent}% ${direction} its usual ${timeContext.timeLabel} occupancy`;
+    const dirWord = deviation >= 0 ? "above" : "below";
+    let plainSentence = `running ${absPercent}% ${dirWord} its usual ${timeContext.timeLabel} occupancy`;
     if (adjustmentPhrase) {
       plainSentence += `, ${adjustmentPhrase}`;
     }
@@ -214,6 +235,15 @@ export async function computeDeviations() {
       area: site.area,
       lotsAvailable: site.lotsAvailable,
       totalLots: site.totalLots,
+      actualLotsOccupied,
+      expectedLotsOccupied,
+      carsDiff,
+      absCarsDiff,
+      carsHeadline,
+      actionText,
+      direction,
+      latitude: site.latitude,
+      longitude: site.longitude,
       actualOccupancyRate: actualOccupancy,
       expectedOccupancyRate: expectedOccupancy,
       baselineOccupancyRate: baselineRate,
@@ -231,9 +261,6 @@ export async function computeDeviations() {
     });
   }
 
-  // Sort by absolute deviation descending
-  evaluatedSites.sort((a, b) => b.absDeviation - a.absDeviation);
-
   // SANITY CHECK: if more than half the watched sites deviate by over 100%,
   // the baselines are wrong, not the world.
   const over100Deviations = evaluatedSites.filter(s => s.absDeviation > 1.0);
@@ -246,16 +273,87 @@ export async function computeDeviations() {
     console.warn(`[SANITY CHECK] Baselines look miscalibrated (${over100Deviations.length}/${evaluatedSites.length} sites > 100% deviation). Deviations suppressed.`);
   }
 
-  // Determine threshold breaches (beyond 10% deviation, i.e. absDeviation > 0.10)
-  const breachedSites = evaluatedSites.filter(s => s.absDeviation > 0.10);
-  const isAllWithinThreshold = breachedSites.length === 0;
+  // SPLIT EXCEPTIONS BY DIRECTION & RANK BY LOTS AFFECTED
+  // "Needs attention": sites furthest ABOVE baseline (carsDiff > 0, ranked by carsDiff descending)
+  // "Has capacity": sites furthest BELOW baseline (carsDiff < 0, ranked by absCarsDiff descending)
+  const thresholdRate = 0.10; // 10% deviation threshold
+  const thresholdCars = 15;   // at least 15 cars affected to qualify as a substantial operational deviation
 
-  // The board shows the two largest deviations as the only prominent elements
-  const flaggedExceptions = isAllWithinThreshold ? [] : breachedSites.slice(0, 2);
-  const flaggedIds = new Set(flaggedExceptions.map(f => f.id));
+  const aboveSites = evaluatedSites
+    .filter(s => s.carsDiff > 0 && s.deviation > thresholdRate && s.carsDiff >= thresholdCars)
+    .sort((a, b) => b.carsDiff - a.carsDiff);
+
+  const belowSites = evaluatedSites
+    .filter(s => s.carsDiff < 0 && s.deviation < -thresholdRate && s.absCarsDiff >= thresholdCars)
+    .sort((a, b) => b.absCarsDiff - a.absCarsDiff);
+
+  // Flag top ONE in each direction (not top two overall)
+  const topAbove = !isMiscalibrated && aboveSites.length > 0 ? aboveSites[0] : null;
+  const topBelow = !isMiscalibrated && belowSites.length > 0 ? belowSites[0] : null;
+
+  const isAllWithinThreshold = !topAbove && !topBelow;
+
+  // Calculate distance between flagged sites if both exist
+  let flaggedDistance = null;
+  if (topAbove && topBelow) {
+    const dist = haversineDistanceKm(
+      topAbove.latitude,
+      topAbove.longitude,
+      topBelow.latitude,
+      topBelow.longitude
+    );
+    const distanceKm = Number(dist.toFixed(1));
+    const isOneTrip = distanceKm <= 5.0; // 5km hardcoded threshold
+    const tripSummary = isOneTrip ? "One trip" : "Two trips";
+    const tripDescription = isOneTrip
+      ? `${distanceKm} km apart — one trip. A single floater can cover both sites.`
+      : `${distanceKm} km apart — two trips required. The dispatcher cannot be in two places at once; sites are too far for one floater.`;
+
+    flaggedDistance = {
+      distanceKm,
+      isOneTrip,
+      tripSummary,
+      tripDescription,
+      origin: topBelow.development,
+      destination: topAbove.development
+    };
+  }
+
+  // ONE DECISION LINE ABOVE EVERYTHING
+  // Generated directly from the flagged sites for the duty dispatcher
+  let decisionHeadline = "Nothing needs a floater right now.";
+  let decisionSubtext = "All watched carparks are operating within normal baseline limits.";
+
+  if (topAbove && topBelow) {
+    decisionHeadline = `Two sites need attention before the ${timeContext.period} peak.`;
+    decisionSubtext = flaggedDistance && flaggedDistance.isOneTrip
+      ? `Redeploy floater from ${topBelow.development} to ${topAbove.development} (${flaggedDistance.distanceKm} km — single trip).`
+      : `Send floater to ${topAbove.development}; ${topBelow.development} has capacity but is ${flaggedDistance?.distanceKm} km away (two trips).`;
+  } else if (topAbove) {
+    decisionHeadline = `Send floater to ${topAbove.development} — queues forming.`;
+    decisionSubtext = `${topAbove.carsHeadline} (${topAbove.deviationSignedStr} vs baseline). No sites currently reporting excess attendant capacity.`;
+  } else if (topBelow) {
+    decisionHeadline = `Floater available at ${topBelow.development}; all other sites normal.`;
+    decisionSubtext = `${topBelow.carsHeadline} (${topBelow.deviationSignedStr} vs baseline). No queue bottlenecks reported.`;
+  }
+
+  // Flagged set for quiet list
+  const flaggedIds = new Set([
+    ...(topAbove ? [topAbove.id] : []),
+    ...(topBelow ? [topBelow.id] : [])
+  ]);
 
   // Remaining watched sites as a quiet ranked list beneath
-  const quietList = evaluatedSites.filter(s => !flaggedIds.has(s.id));
+  // Ranked by lots affected (absCarsDiff) descending
+  const quietList = evaluatedSites
+    .filter(s => !flaggedIds.has(s.id))
+    .sort((a, b) => b.absCarsDiff - a.absCarsDiff);
+
+  // Backward compatibility: flaggedExceptions array contains flagged sites (up to 2: topAbove, topBelow)
+  const flaggedExceptions = [
+    ...(topAbove ? [topAbove] : []),
+    ...(topBelow ? [topBelow] : [])
+  ];
 
   // Format missing sites list
   const missingSites = WATCHED_SITES
@@ -278,6 +376,11 @@ export async function computeDeviations() {
     isStale,
     cacheAge,
     timeContext,
+    decisionHeadline,
+    decisionSubtext,
+    topAbove,
+    topBelow,
+    flaggedDistance,
     isAllWithinThreshold,
     isMiscalibrated,
     miscalibrationReason,

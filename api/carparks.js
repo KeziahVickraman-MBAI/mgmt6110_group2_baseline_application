@@ -143,10 +143,11 @@ export async function fetchCarparksData() {
     const occupiedLots = totalLots - availableLots;
     const occupancyRate = totalLots > 0 ? (occupiedLots / totalLots) : 0;
 
-    // Parse location coordinates if available in LTA (space or comma separated "lat lng" or "lat,lng")
+    // Use verified coordinates from WATCHED_SITES as ground truth
     let latitude = watched.latitude;
     let longitude = watched.longitude;
-    if (typeof ltaItem.Location === "string" && ltaItem.Location.trim()) {
+    // Fall back to LTA Location only if watched coordinates are missing
+    if ((!latitude || !longitude) && typeof ltaItem.Location === "string" && ltaItem.Location.trim()) {
       const parts = ltaItem.Location.trim().split(/[\s,]+/);
       if (parts.length >= 2) {
         const p0 = Number(parts[0]);

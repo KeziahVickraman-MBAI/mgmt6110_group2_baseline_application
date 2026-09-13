@@ -30,14 +30,23 @@ export function QuietRankedList({ quietList, missingSites, corruptedSites = [], 
               <th className="py-2.5 px-3.5 font-medium">Development</th>
               <th className="py-2.5 px-3 font-medium">Area & Weather</th>
               <th className="py-2.5 px-3 font-medium text-right">Available Lots</th>
-              <th className="py-2.5 px-3 font-medium text-right">Actual Occ.</th>
-              <th className="py-2.5 px-3 font-medium text-right">Expected Occ.</th>
+              <th className="py-2.5 px-3 font-medium text-right">Occ / Expected</th>
+              <th className="py-2.5 px-3 font-medium text-right">Lots Affected</th>
               <th className="py-2.5 px-3.5 font-medium text-right">Deviation</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 text-stone-700">
             {quietList.map((site) => {
               const isDeficit = site.deviation < 0;
+              const carsDiff = site.carsDiff ?? (
+                (site.totalLots - site.lotsAvailable) - Math.round(site.expectedOccupancyRate * site.totalLots)
+              );
+              const carsAffectedText = carsDiff > 0 
+                ? `+${carsDiff.toLocaleString()} cars` 
+                : carsDiff < 0 
+                  ? `${carsDiff.toLocaleString()} cars` 
+                  : "0 cars";
+
               return (
                 <tr
                   key={site.id}
@@ -50,7 +59,7 @@ export function QuietRankedList({ quietList, missingSites, corruptedSites = [], 
                   <td className="py-2.5 px-3 text-stone-600">
                     <span>{site.area}</span>
                     {site.nearestAreaName && (
-                      <span className="text-stone-600 text-[11px] block">
+                      <span className="text-stone-500 text-[11px] block">
                         near {site.nearestAreaName} {site.distanceKm ? `(${site.distanceKm}km)` : ""} · {site.nearestAreaForecast || "Fair"}
                       </span>
                     )}
@@ -58,7 +67,7 @@ export function QuietRankedList({ quietList, missingSites, corruptedSites = [], 
                   <td className="py-2.5 px-3 text-right font-mono">
                     {site.isFull ? (
                       <span className="inline-flex items-center text-rose-700 font-semibold bg-rose-50 px-1.5 py-0.5 rounded text-[11px]">
-                        FULL (0 lots available)
+                        FULL (0 lots)
                       </span>
                     ) : (
                       <span>
@@ -67,13 +76,16 @@ export function QuietRankedList({ quietList, missingSites, corruptedSites = [], 
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-right font-mono">
-                    {Math.round(site.actualOccupancyRate * 100)}%
+                    <span className="font-medium text-stone-800">{Math.round(site.actualOccupancyRate * 100)}%</span>
+                    <span className="text-stone-400 text-[11px] ml-1">/ {Math.round(site.expectedOccupancyRate * 100)}%</span>
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono text-stone-600">
-                    {Math.round(site.expectedOccupancyRate * 100)}%
+                  <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                    <span className={carsDiff > 0 ? "text-amber-800" : carsDiff < 0 ? "text-sky-800" : "text-stone-500"}>
+                      {carsAffectedText}
+                    </span>
                   </td>
                   <td className="py-2.5 px-3.5 text-right font-mono tabular-nums font-semibold">
-                    <span className={isDeficit ? "text-amber-800" : "text-sky-800"}>
+                    <span className={isDeficit ? "text-sky-800" : "text-amber-800"}>
                       {site.deviationSignedStr}
                     </span>
                   </td>

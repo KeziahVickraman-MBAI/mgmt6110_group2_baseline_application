@@ -13,6 +13,13 @@ export interface EvaluatedSite {
   area: string;
   lotsAvailable: number;
   totalLots: number;
+  actualLotsOccupied?: number;
+  expectedLotsOccupied?: number;
+  carsDiff?: number;
+  absCarsDiff?: number;
+  carsHeadline?: string;
+  actionText?: string;
+  direction?: "above" | "below" | "normal";
   actualOccupancyRate: number;
   expectedOccupancyRate: number;
   baselineOccupancyRate: number;
@@ -27,6 +34,15 @@ export interface EvaluatedSite {
   absDeviation: number;
   plainSentence: string;
   isFull: boolean;
+}
+
+export interface FlaggedDistance {
+  distanceKm: number;
+  isOneTrip: boolean;
+  tripSummary: string;
+  tripDescription: string;
+  origin: string;
+  destination: string;
 }
 
 export interface MissingSite {
@@ -56,6 +72,11 @@ export interface DeviationsResponse {
     period: string;
     timeLabel: string;
   };
+  decisionHeadline?: string;
+  decisionSubtext?: string;
+  topAbove?: EvaluatedSite | null;
+  topBelow?: EvaluatedSite | null;
+  flaggedDistance?: FlaggedDistance | null;
   isAllWithinThreshold: boolean;
   isMiscalibrated?: boolean;
   miscalibrationReason?: string | null;

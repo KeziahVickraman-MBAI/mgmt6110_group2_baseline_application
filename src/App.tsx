@@ -3,12 +3,13 @@ import { DeviationsResponse, BoardState } from "./types";
 import { getScenarioData } from "./demoData";
 import { FreshnessHeader } from "./components/FreshnessHeader";
 import { ExceptionCard } from "./components/ExceptionCard";
+import { FlaggedDistanceBanner } from "./components/FlaggedDistanceBanner";
 import { QuietRankedList } from "./components/QuietRankedList";
 import { LoadingView, EmptyView, RefusedView, UnreachableView, MiscalibratedView } from "./components/StateViews";
 import { NotifyForm } from "./components/NotifyForm";
 import { CarparkSearch } from "./components/CarparkSearch";
 import { Footer } from "./components/Footer";
-import { Radio, Layers } from "lucide-react";
+import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 
 export default function App() {
   const [feedMode, setFeedMode] = useState<"live" | "simulated">("live");
@@ -246,23 +247,90 @@ export default function App() {
           </>
         )}
 
-        {/* Flagged Exceptions State */}
+        {/* Flagged Exceptions State (Reframed for Duty Dispatcher) */}
         {boardState === "flagged" && data && (
           <>
-            <div className="mb-6">
-              <h1 className="text-xl font-bold tracking-tight text-stone-950 mb-1">
-                Priority Carpark Exceptions
+            {/* E. One decision line above everything */}
+            <div
+              id="dispatcher-decision-line"
+              className="mb-6 bg-stone-900 text-stone-100 rounded-xl p-6 border border-stone-800 shadow-xs"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-950 font-mono tracking-wider uppercase">
+                  Duty Decision
+                </span>
+                <span className="text-xs text-stone-400 font-mono">Next 60 Minutes • Attendant Deployment</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1.5">
+                {data.decisionHeadline || "Two sites need attention before the evening peak."}
               </h1>
-              <p className="text-sm text-stone-600">
-                The two watched sites furthest from their normal {data.timeContext.timeLabel} occupancy, adjusted for area rain.
-              </p>
+              {data.decisionSubtext && (
+                <p className="text-sm sm:text-base text-stone-300 leading-relaxed max-w-3xl">
+                  {data.decisionSubtext}
+                </p>
+              )}
             </div>
 
-            {/* The Two Flagged Exceptions as the ONLY Prominent Elements */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {data.flaggedExceptions.map((site, index) => (
-                <ExceptionCard key={site.id} site={site} rank={index + 1} />
-              ))}
+            {/* C. Distance between flagged sites & one/two trip guidance */}
+            {data.flaggedDistance && (
+              <FlaggedDistanceBanner distance={data.flaggedDistance} />
+            )}
+
+            {/* A. Two columns split by direction */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Column 1: Needs attention (furthest ABOVE baseline) */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between gap-2 mb-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
+                    <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
+                      Needs Attention
+                    </h2>
+                  </div>
+                  <span className="text-xs text-stone-500 font-medium">
+                    Queues forming · Barriers backing up
+                  </span>
+                </div>
+
+                {data.topAbove ? (
+                  <ExceptionCard site={data.topAbove} columnType="needs-attention" />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
+                    <CheckCircle2 className="w-8 h-8 text-stone-400 mb-2" />
+                    <p className="text-stone-700 font-medium text-sm">No queues forming</p>
+                    <p className="text-stone-500 text-xs mt-1">
+                      No carparks running significantly above normal baseline.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Column 2: Has capacity (furthest BELOW baseline) */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between gap-2 mb-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-100"></span>
+                    <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
+                      Has Capacity
+                    </h2>
+                  </div>
+                  <span className="text-xs text-stone-500 font-medium">
+                    Attendant with nothing to do
+                  </span>
+                </div>
+
+                {data.topBelow ? (
+                  <ExceptionCard site={data.topBelow} columnType="has-capacity" />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
+                    <UserCheck className="w-8 h-8 text-stone-400 mb-2" />
+                    <p className="text-stone-700 font-medium text-sm">No attendant surplus</p>
+                    <p className="text-stone-500 text-xs mt-1">
+                      All sites are operating at or near normal baseline.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Quiet Ranked List Beneath */}

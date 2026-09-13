@@ -34,10 +34,10 @@ export function EmptyView({ totalWatched }: EmptyViewProps) {
         </div>
         <div>
           <h2 className="text-xl font-bold text-emerald-950 tracking-tight mb-1">
-            Nothing is off baseline right now.
+            Nothing needs a floater right now.
           </h2>
           <p className="text-emerald-800 text-base leading-relaxed">
-            All {totalWatched} watched sites are within 10% of their usual level for this hour.
+            All {totalWatched} watched sites are operating within normal baseline limits for this hour. Floaters on shift remain on standby.
           </p>
         </div>
       </div>
