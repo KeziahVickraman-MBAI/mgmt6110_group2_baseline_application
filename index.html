@@ -9,9 +9,159 @@
     <meta property="og:description" content="Real-time Singapore carpark exception board showing the two largest occupancy deviations from normal baseline, adjusted for per-area rain." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Application Panel: Two-way Consumer / Industry view toggle -->
+    <section id="panel-publish" style="display:none;">
+      <p class="publish-lede">The same live feed, two users, two entirely different products. Switch between them.</p>
+      
+      <div class="toggle-group" role="group" aria-label="Product view switcher">
+        <button type="button" class="toggle-btn" data-view="consumer" aria-pressed="true">Consumer</button>
+        <button type="button" class="toggle-btn" data-view="industry" aria-pressed="false">Industry</button>
+      </div>
+
+      <!-- CONSUMER VIEW (Default) -->
+      <div id="publish-view-consumer">
+        <div class="rule-cards-grid">
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">1</span>USER OPENS APP</div>
+              <h4 class="card-title">SMU student who drives in</h4>
+              <p class="card-body">Opens it once, to subscribe. Then never opens it again — the product reaches them, not the other way round.</p>
+            </div>
+            <div class="card-footer">Context: One campus, one morning</div>
+          </div>
+
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">2</span>SEES SOMETHING</div>
+              <h4 class="card-title">A warning, not a board</h4>
+              <p class="card-body">&ldquo;Bras Basah is filling faster than usual for a Tuesday. It normally has 40 free at 8:40; right now it has 12.&rdquo; Sent before they leave, not shown when they arrive.</p>
+            </div>
+            <div class="card-footer">Metric: Their site, their usual arrival time</div>
+          </div>
+
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">3</span>HENCE DOES SOMETHING</div>
+              <h4 class="card-title">Leaves ten minutes earlier</h4>
+              <p class="card-body">Or takes the train. The decision costs nothing and is made at home, which is the only moment it can still be acted on.</p>
+            </div>
+            <div class="card-footer">Action: Before leaving, not on arrival</div>
+          </div>
+        </div>
+
+        <div class="beat-four-card">
+          <div class="card-header-label"><span class="card-badge">4</span>WHAT THIS REPLACES</div>
+          <h4 class="card-title">Finding out on arrival</h4>
+          <p class="card-body">Existing apps show what a carpark looks like right now. That is the one moment the information is useless — the driver is already there. The gap is not live data, it is a warning early enough to change the plan.</p>
+          <div class="card-footer">Gap: Timing, not availability</div>
+        </div>
+
+        <div class="synthesis-band">
+          <div class="synthesis-text">
+            &ldquo;The student subscribes once to a threshold at one carpark at one time of day, and the board contacts them on the mornings it matters. They never see a ranking, a deviation or a map.&rdquo;
+          </div>
+          <span class="synthesis-chip">Decision Rule: Their site, their time, their threshold</span>
+        </div>
+      </div>
+
+      <!-- INDUSTRY VIEW -->
+      <div id="publish-view-industry" style="display:none;">
+        <div class="rule-cards-grid">
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">1</span>USER OPENS APP</div>
+              <h4 class="card-title">Multi-site Facilities Manager</h4>
+              <p class="card-body">Opens this board at shift start and on the hourly check, covering a portfolio of properties they cannot physically see — a REIT operations team, a school cluster, a healthcare group&apos;s sites.</p>
+            </div>
+            <div class="card-footer">Context: Multi-site portfolio oversight</div>
+          </div>
+
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">2</span>SEES SOMETHING</div>
+              <h4 class="card-title">Directional Baseline Exceptions</h4>
+              <p class="card-body">Which site is running abnormally above its own normal pattern for this hour, and which is running below, with the net cars affected rather than a percentage.</p>
+            </div>
+            <div class="card-footer">Metric: Net cars vs. rain-adjusted baseline</div>
+          </div>
+
+          <div class="rule-card">
+            <div>
+              <div class="card-header-label"><span class="card-badge">3</span>HENCE DOES SOMETHING</div>
+              <h4 class="card-title">Calls the Site Before It Becomes a Complaint</h4>
+              <p class="card-body">Off-pattern usually means something else is wrong — an unflagged event, a barrier fault, a road closure, a tenant issue. The action is a phone call to find out which, not a dispatch.</p>
+            </div>
+            <div class="card-footer">Action: Verify within the hour</div>
+          </div>
+        </div>
+
+        <div class="beat-four-card">
+          <div class="card-header-label"><span class="card-badge">4</span>WHAT THIS REPLACES</div>
+          <h4 class="card-title">Nothing, Currently</h4>
+          <p class="card-body">Today nothing tells a multi-site manager that a property is off-pattern. They find out when somebody complains — a tenant, a driver, a security lead. The board does not replace an existing tool; it fills a gap where the current detection method is a phone call from someone annoyed.</p>
+          <div class="card-footer">Gap: Detection is currently reactive</div>
+        </div>
+
+        <div class="synthesis-band">
+          <div class="synthesis-text">
+            &ldquo;The facilities manager opens this board and sees which site in the portfolio is behaving unlike itself, by how many cars, and how recently the count was taken — then calls that site to find out why, before anyone else notices.&rdquo;
+          </div>
+          <span class="synthesis-chip">Decision Rule: 10% off own baseline</span>
+        </div>
+      </div>
+
+      <!-- COMPARISON TABLE (Shown in both views) -->
+      <div class="comparison-container">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Consumer</th>
+              <th>Industry</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Opens it</td>
+              <td>Once, to subscribe</td>
+              <td>Hourly, across a portfolio</td>
+            </tr>
+            <tr>
+              <td>Wants</td>
+              <td>A warning before 8am</td>
+              <td>Which site is off-pattern</td>
+            </tr>
+            <tr>
+              <td>Acts by</td>
+              <td>Leaving earlier</td>
+              <td>Calling the site</td>
+            </tr>
+            <tr>
+              <td>Unit of decision</td>
+              <td>Their own morning</td>
+              <td>One site in a portfolio</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>Who reviews it</strong></td>
+              <td><strong>Nobody</strong></td>
+              <td><strong>A named facilities lead</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- REFLECTION PARAGRAPH (Shown in both views) -->
+      <p class="reflection-paragraph">
+        The same functions serve both. What changes is not the data but the unit of decision — and with it, the oversight. Nobody reviews a student&apos;s choice to leave ten minutes early, which is why a consumer product can run on a feed whose availability we cannot guarantee. A portfolio manager acting on the same number is making a decision somebody else will later ask about, which is why the industry version needs the freshness line, the corrupted-reading quarantine and the health endpoint, and the consumer version arguably does not.
+      </p>
+    </section>
+
+    <script src="/script.js" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

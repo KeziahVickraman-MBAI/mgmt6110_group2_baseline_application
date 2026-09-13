@@ -14,7 +14,7 @@ import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle } from "
 
 export default function App() {
   const [feedMode, setFeedMode] = useState<"live" | "simulated">("live");
-  const [scenario, setScenario] = useState<"flagged" | "empty" | "stale" | "weather-degraded" | "miscalibrated" | "refused" | "unreachable">("flagged");
+  const [scenario, setScenario] = useState<"flagged" | "rain-adjusted" | "empty" | "stale" | "weather-degraded" | "miscalibrated" | "refused" | "unreachable">("flagged");
   const [data, setData] = useState<DeviationsResponse | null>(null);
   const [boardState, setBoardState] = useState<BoardState>("loading");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -152,7 +152,7 @@ export default function App() {
                 <Layers className="w-3.5 h-3.5 text-stone-400" />
                 State:
               </span>
-              {(["flagged", "empty", "stale", "weather-degraded", "miscalibrated", "refused", "unreachable"] as const).map((sc) => (
+              {(["flagged", "rain-adjusted", "empty", "stale", "weather-degraded", "miscalibrated", "refused", "unreachable"] as const).map((sc) => (
                 <button
                   key={sc}
                   onClick={() => {

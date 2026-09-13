@@ -1,5 +1,5 @@
 import { EvaluatedSite } from "../types";
-import { ArrowDownRight, ArrowUpRight, AlertCircle, CheckCircle2, UserCheck, Send } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, AlertCircle, CheckCircle2, UserCheck, Send, CloudRain } from "lucide-react";
 
 interface ExceptionCardProps {
   site: EvaluatedSite;
@@ -91,6 +91,21 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
           <div className="text-xs text-stone-500 font-mono mt-1">
             vs adjusted baseline ({Math.round(expectedOccupancyRate * 100)}% expected, {expectedLotsOccupied.toLocaleString()} cars)
           </div>
+
+          {/* Weather Discount Callout: Highlights the exact weather use case */}
+          {site.rainFactor && site.rainFactor < 1.0 && (
+            <div className="mt-3 pt-2.5 border-t border-stone-200/70 flex items-center justify-between gap-2 text-[11px] font-mono text-sky-900">
+              <div className="flex items-center gap-1.5">
+                <CloudRain className="w-3.5 h-3.5 text-sky-700 shrink-0" />
+                <span>
+                  <strong>Rain Discount ({site.rainFactor}×):</strong> Baseline reduced from {Math.round(site.baselineOccupancyRate * 100)}% → {Math.round(expectedOccupancyRate * 100)}%
+                </span>
+              </div>
+              <span className="text-[10px] bg-sky-100 text-sky-900 font-semibold px-1.5 py-0.5 rounded border border-sky-200 shrink-0">
+                Prevents rain false-alarm
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Observation plain sentence */}
@@ -109,10 +124,13 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
               ({Math.round(site.actualOccupancyRate * 100)}% full)
             </span>
           </div>
-          <div>
-            Weather:{" "}
-            <span className="text-stone-700">
-              {site.nearestAreaForecast || "Fair"} ({site.nearestAreaName || "Local"})
+          <div className="flex items-center gap-1">
+            <span>Weather:</span>
+            <span className="font-semibold text-stone-800">
+              {site.nearestAreaForecast || "Fair"}
+            </span>
+            <span className="text-stone-500">
+              ({site.nearestAreaName || "Local"}{site.distanceKm ? ` · ${site.distanceKm}km` : ""}{site.rainFactor && site.rainFactor < 1.0 ? ` · ${site.rainFactor}×` : ""})
             </span>
           </div>
         </div>

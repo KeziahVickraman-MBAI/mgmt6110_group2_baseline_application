@@ -1,4 +1,4 @@
-import { AlertTriangle, CloudOff, RefreshCw } from "lucide-react";
+import { AlertTriangle, CloudOff, RefreshCw, CloudRain } from "lucide-react";
 
 interface FreshnessHeaderProps {
   readingTimestamp: string | null;
@@ -81,10 +81,22 @@ export function FreshnessHeader({
         )}
 
         {/* Weather Degraded Notice */}
-        {weatherDegraded && (
+        {weatherDegraded ? (
           <div className="flex items-center gap-2 px-3.5 py-2 bg-stone-100 border border-stone-300 rounded-md text-stone-800 text-sm">
             <CloudOff className="w-4 h-4 text-stone-600 shrink-0" />
             <span>{weatherReason || "Rain adjustment unavailable — deviations are unadjusted."}</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-1.5 bg-sky-50/70 border border-sky-200/80 rounded-md text-xs text-sky-950">
+            <div className="flex items-center gap-2">
+              <CloudRain className="w-3.5 h-3.5 text-sky-700 shrink-0" />
+              <span>
+                <strong>Weather Normalization:</strong> NEA 2-hour localized forecasts dynamically discount baseline expected demand by up to 12% during rain.
+              </span>
+            </div>
+            <span className="font-mono text-[11px] font-semibold text-sky-800 bg-sky-100/90 px-2 py-0.5 rounded border border-sky-200/80 shrink-0">
+              Prevents false rain alarms
+            </span>
           </div>
         )}
 

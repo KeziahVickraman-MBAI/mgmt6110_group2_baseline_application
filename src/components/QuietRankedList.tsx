@@ -94,6 +94,9 @@ export function QuietRankedList({
                     {site.nearestAreaName && (
                       <span className="text-stone-500 text-[11px] block">
                         near {site.nearestAreaName} {site.distanceKm ? `(${site.distanceKm}km)` : ""} · {site.nearestAreaForecast || "Fair"}
+                        {site.rainFactor && site.rainFactor < 1.0 ? (
+                          <span className="text-sky-700 font-semibold"> ({site.rainFactor}× rain discount)</span>
+                        ) : null}
                       </span>
                     )}
                   </td>

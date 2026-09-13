@@ -21,7 +21,7 @@ const SITE_COORDS: Record<string, { lat: number; lng: number; area: string; near
 };
 
 export function getScenarioData(
-  scenario: "flagged" | "empty" | "stale" | "weather-degraded" | "miscalibrated"
+  scenario: "flagged" | "rain-adjusted" | "empty" | "stale" | "weather-degraded" | "miscalibrated"
 ): DeviationsResponse {
   const baseTimestamp = new Date().toISOString();
   const oldTimestamp = new Date(Date.now() - 22 * 60 * 1000).toISOString();
@@ -243,69 +243,82 @@ export function getScenarioData(
     };
   }
 
-  // 3. FLAGGED / STALE / WEATHER-DEGRADED SCENARIOS
+  // 3. FLAGGED / RAIN-ADJUSTED / STALE / WEATHER-DEGRADED SCENARIOS
   const isStale = scenario === "stale";
   const isWeatherDegraded = scenario === "weather-degraded";
+  const isRainAdjusted = scenario === "rain-adjusted";
 
-  // Top Above (Needs Attention): Suntec City (+270 cars above normal, queues forming at Nicoll Highway barrier)
+  // Top Above (Needs Attention): Suntec City
+  // Under rain-adjusted, baseline drops from 88% down to 77% (0.88x rain factor), so Suntec is even more heavily off-pattern!
   const topAbove: EvaluatedSite = {
     id: "1",
     development: "Suntec City",
     area: "Marina",
-    lotsAvailable: 110,
+    lotsAvailable: isRainAdjusted ? 155 : 110,
     totalLots: 3100,
-    actualLotsOccupied: 2990,
-    expectedLotsOccupied: 2720,
-    carsDiff: 270,
-    absCarsDiff: 270,
-    carsHeadline: "270 cars above normal",
+    actualLotsOccupied: isRainAdjusted ? 2945 : 2990,
+    expectedLotsOccupied: isRainAdjusted ? 2387 : 2720,
+    carsDiff: isRainAdjusted ? 558 : 270,
+    absCarsDiff: isRainAdjusted ? 558 : 270,
+    carsHeadline: isRainAdjusted ? "558 cars above rain-adjusted baseline" : "270 cars above normal",
     actionText: "Send someone.",
     direction: "above",
-    actualOccupancyRate: 0.96,
-    expectedOccupancyRate: isWeatherDegraded ? 0.88 : 0.88,
+    actualOccupancyRate: isRainAdjusted ? 0.95 : 0.96,
+    expectedOccupancyRate: isRainAdjusted ? 0.77 : 0.88,
     baselineOccupancyRate: 0.88,
     observedOn: "2026-08-28",
-    rainFactor: 1.0,
+    rainFactor: isRainAdjusted ? 0.88 : 1.0,
     nearestAreaName: "City",
-    nearestAreaForecast: isWeatherDegraded ? "Thundery Showers" : "Fair (Night)",
+    nearestAreaForecast: isRainAdjusted
+      ? "Heavy Thundery Showers"
+      : isWeatherDegraded
+      ? "Thundery Showers"
+      : "Fair (Night)",
     distanceKm: 1.5,
-    deviation: 0.10,
-    deviationPercent: 10,
-    deviationSignedStr: "+10%",
-    absDeviation: 0.10,
-    plainSentence: isWeatherDegraded
-      ? "running 10% above its usual Sunday evening occupancy"
+    deviation: isRainAdjusted ? 0.23 : 0.10,
+    deviationPercent: isRainAdjusted ? 23 : 10,
+    deviationSignedStr: isRainAdjusted ? "+23%" : "+10%",
+    absDeviation: isRainAdjusted ? 0.23 : 0.10,
+    plainSentence: isRainAdjusted
+      ? "running 23% above its usual Sunday evening occupancy, adjusted for heavy thundery showers in City (1.5km)"
       : "running 10% above its usual Sunday evening occupancy",
     isFull: false
   };
 
-  // Top Below (Has Capacity): Raffles City (-240 cars below normal, attendant available with capacity)
+  // Top Below (Has Capacity): Raffles City
+  // Under rain-adjusted, expected baseline is 73% (0.83 * 0.88)
   const topBelow: EvaluatedSite = {
     id: "3",
     development: "Raffles City",
     area: "City",
-    lotsAvailable: 420,
+    lotsAvailable: isRainAdjusted ? 525 : 420,
     totalLots: 1050,
-    actualLotsOccupied: 630,
-    expectedLotsOccupied: 870,
-    carsDiff: -240,
-    absCarsDiff: 240,
-    carsHeadline: "240 cars below normal",
+    actualLotsOccupied: isRainAdjusted ? 525 : 630,
+    expectedLotsOccupied: isRainAdjusted ? 767 : 870,
+    carsDiff: isRainAdjusted ? -242 : -240,
+    absCarsDiff: isRainAdjusted ? 242 : 240,
+    carsHeadline: isRainAdjusted ? "242 cars below rain-adjusted baseline" : "240 cars below normal",
     actionText: "Floater available here.",
     direction: "below",
-    actualOccupancyRate: 0.60,
-    expectedOccupancyRate: 0.83,
+    actualOccupancyRate: isRainAdjusted ? 0.50 : 0.60,
+    expectedOccupancyRate: isRainAdjusted ? 0.73 : 0.83,
     baselineOccupancyRate: 0.83,
     observedOn: "2026-08-28",
-    rainFactor: 1.0,
+    rainFactor: isRainAdjusted ? 0.88 : 1.0,
     nearestAreaName: "City",
-    nearestAreaForecast: isWeatherDegraded ? "Thundery Showers" : "Fair (Night)",
+    nearestAreaForecast: isRainAdjusted
+      ? "Heavy Thundery Showers"
+      : isWeatherDegraded
+      ? "Thundery Showers"
+      : "Fair (Night)",
     distanceKm: 1.0,
-    deviation: -0.28,
-    deviationPercent: -28,
-    deviationSignedStr: "-28%",
-    absDeviation: 0.28,
-    plainSentence: "running 28% below its usual Sunday evening occupancy",
+    deviation: isRainAdjusted ? -0.32 : -0.28,
+    deviationPercent: isRainAdjusted ? -32 : -28,
+    deviationSignedStr: isRainAdjusted ? "-32%" : "-28%",
+    absDeviation: isRainAdjusted ? 0.32 : 0.28,
+    plainSentence: isRainAdjusted
+      ? "running 32% below its usual Sunday evening occupancy, adjusted for heavy thundery showers in City (1.0km)"
+      : "running 28% below its usual Sunday evening occupancy",
     isFull: false
   };
 
@@ -321,8 +334,12 @@ export function getScenarioData(
   };
 
   // Decision line for duty dispatcher
-  const decisionHeadline = "Two sites need attention before the evening peak.";
-  const decisionSubtext = "Redeploy floater from Raffles City to Suntec City (0.5 km — single trip). Queues forming at Suntec; excess capacity at Raffles City.";
+  const decisionHeadline = isRainAdjusted
+    ? "Rain adjustment active: Two sites deviate from storm baseline."
+    : "Two sites need attention before the evening peak.";
+  const decisionSubtext = isRainAdjusted
+    ? "Heavy Thundery Showers in City (-12% demand discount). Suntec City is still running hot (+558 cars); Raffles City has surplus capacity (-242 cars)."
+    : "Redeploy floater from Raffles City to Suntec City (0.5 km — single trip). Queues forming at Suntec; excess capacity at Raffles City.";
 
   return {
     readingTimestamp: isStale ? oldTimestamp : baseTimestamp,

@@ -99,5 +99,5 @@ export interface DeviationsResponse {
   isUnreachable?: boolean;
 }
 
-export type BoardState = "loading" | "empty" | "flagged" | "stale" | "refused" | "unreachable" | "miscalibrated";
+export type BoardState = "loading" | "empty" | "flagged" | "rain-adjusted" | "stale" | "refused" | "unreachable" | "miscalibrated";
 export type NotifyState = "idle" | "submitting" | "sent" | "rejected" | "unreachable";
