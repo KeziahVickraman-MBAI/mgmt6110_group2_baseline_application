@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, ChevronDown, ChevronUp, Users, Eye, ArrowRightCircle } from "lucide-react";
+import { Info, ChevronDown, ChevronUp, Users, Eye, ArrowRightCircle, History } from "lucide-react";
 
 export function UserStatementBanner() {
   const [isOpen, setIsOpen] = useState(true);
@@ -33,7 +33,7 @@ export function UserStatementBanner() {
                 </span>
               </div>
               <p className="text-xs text-stone-600 font-medium mt-0.5">
-                The operational dispatch framework: Who opens this, what they see, and what action they take.
+                The operational oversight framework: Who opens this, what they see, and what action they take.
               </p>
             </div>
           </div>
@@ -51,7 +51,7 @@ export function UserStatementBanner() {
 
       {/* Collapsible Content Body */}
       {isOpen && (
-        <div id="user-statement-content" className="p-5 sm:p-6 space-y-5 bg-white">
+        <div id="user-statement-content" className="p-5 sm:p-6 space-y-4 bg-white">
           {/* Main 3-Step User Statement Sequence */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Step 1: User opens this app */}
@@ -67,14 +67,14 @@ export function UserStatementBanner() {
                   </span>
                 </div>
                 <h4 className="text-sm font-bold text-stone-950 mb-1">
-                  Duty Operations Dispatcher
+                  Multi-site Facilities Manager
                 </h4>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Opens this board at the start of a shift or during the hourly operational check before peak congestion periods.
+                  Opens this board at shift start and on the hourly check, covering a portfolio of properties they cannot physically see — a REIT operations team, a school cluster, a healthcare group&apos;s sites.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-stone-200/80 text-[11px] font-mono text-stone-500">
-                Context: Carpark floater coordination
+                Context: Multi-site portfolio oversight
               </div>
             </div>
 
@@ -94,7 +94,7 @@ export function UserStatementBanner() {
                   Directional Baseline Exceptions
                 </h4>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Spots which carpark is running abnormally <strong className="text-amber-900">above</strong> normal (queue risk) vs. <strong className="text-sky-900">below</strong> normal (attendant surplus), with net cars affected and straight-line travel distance.
+                  Which site is running abnormally <strong className="text-amber-900">above</strong> its own normal pattern for this hour, and which is running <strong className="text-sky-900">below</strong>, with the net cars affected rather than a percentage.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-stone-200/80 text-[11px] font-mono text-stone-500">
@@ -115,28 +115,52 @@ export function UserStatementBanner() {
                   </span>
                 </div>
                 <h4 className="text-sm font-bold text-stone-950 mb-1">
-                  Redeploys Floaters in Next 60 Min
+                  Calls the Site Before It Becomes a Complaint
                 </h4>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Dispatches standby floaters from the quiet carpark to the congested carpark (e.g. 0.5 km — single trip) to manage barrier queues before traffic spills onto public roads.
+                  Off-pattern usually means something else is wrong — an unflagged event, a barrier fault, a road closure, a tenant issue. The action is a phone call to find out which, not a dispatch.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-stone-200/80 text-[11px] font-mono text-stone-500">
-                Action: Dispatch within the next 1 hour
+                Action: Verify within the hour
               </div>
             </div>
           </div>
 
-          {/* Synthesis Quote Box */}
+          {/* New Fourth Beat: What this replaces (Single full-width row) */}
+          <div className="rounded-lg border border-stone-200 bg-stone-50/60 p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-stone-700 text-white text-xs font-bold font-mono">
+                  4
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-stone-700 font-mono flex items-center gap-1">
+                  <History className="w-3.5 h-3.5 text-stone-600" />
+                  What This Replaces
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-stone-950 mb-1">
+                Nothing, Currently
+              </h4>
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Today nothing tells a multi-site manager that a property is off-pattern. They find out when somebody complains — a tenant, a driver, a security lead. The board does not replace an existing tool; it fills a gap where the current detection method is a phone call from someone annoyed.
+              </p>
+            </div>
+            <div className="mt-3 pt-2.5 border-t border-stone-200/80 text-[11px] font-mono text-stone-500">
+              Gap: Detection is currently reactive
+            </div>
+          </div>
+
+          {/* Core Synthesis Band */}
           <div className="rounded-lg bg-stone-900 text-stone-100 p-4 border border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="text-xs sm:text-sm leading-relaxed text-stone-200">
               <span className="font-bold text-amber-400 font-mono uppercase text-xs mr-2">
                 Core Synthesis:
               </span>
-              &ldquo;The duty dispatcher opens this app, immediately identifies which carpark is forming queues versus which has surplus attendant capacity within travel range, and redeploys floaters between sites before gridlock occurs.&rdquo;
+              &ldquo;The facilities manager opens this board and sees which site in the portfolio is behaving unlike itself, by how many cars, and how recently the count was taken — then calls that site to find out why, before anyone else notices.&rdquo;
             </div>
             <span className="text-[11px] font-mono text-stone-400 bg-stone-800 px-2.5 py-1 rounded border border-stone-700 shrink-0 self-start sm:self-auto">
-              Decision Rule: 5.0 km threshold
+              Decision Rule: 10% off own baseline
             </span>
           </div>
         </div>
