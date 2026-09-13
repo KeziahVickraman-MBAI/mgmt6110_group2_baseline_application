@@ -8,6 +8,7 @@ import { QuietRankedList } from "./components/QuietRankedList";
 import { LoadingView, EmptyView, RefusedView, UnreachableView, MiscalibratedView } from "./components/StateViews";
 import { NotifyForm } from "./components/NotifyForm";
 import { CarparkSearch } from "./components/CarparkSearch";
+import { UserStatementBanner } from "./components/UserStatementBanner";
 import { Footer } from "./components/Footer";
 import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 
@@ -188,6 +189,9 @@ export default function App() {
 
       {/* Main Single-Screen Exception Board */}
       <main className="max-w-5xl mx-auto w-full px-6 py-8 flex-1">
+        {/* Class Overview: Collapsible Product & User Statement Segment */}
+        <UserStatementBanner />
+
         {/* Carpark Search Bar: Available across all modes */}
         <CarparkSearch
           flaggedSites={data ? data.flaggedExceptions : getScenarioData("flagged").flaggedExceptions}
