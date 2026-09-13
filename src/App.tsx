@@ -4,7 +4,7 @@ import { getScenarioData } from "./demoData";
 import { FreshnessHeader } from "./components/FreshnessHeader";
 import { ExceptionCard } from "./components/ExceptionCard";
 import { QuietRankedList } from "./components/QuietRankedList";
-import { LoadingView, EmptyView, RefusedView, UnreachableView } from "./components/StateViews";
+import { LoadingView, EmptyView, RefusedView, UnreachableView, MiscalibratedView } from "./components/StateViews";
 import { NotifyForm } from "./components/NotifyForm";
 import { CarparkSearch } from "./components/CarparkSearch";
 import { Footer } from "./components/Footer";
@@ -12,7 +12,7 @@ import { Radio, Layers } from "lucide-react";
 
 export default function App() {
   const [feedMode, setFeedMode] = useState<"live" | "simulated">("live");
-  const [scenario, setScenario] = useState<"flagged" | "empty" | "stale" | "weather-degraded" | "refused" | "unreachable">("flagged");
+  const [scenario, setScenario] = useState<"flagged" | "empty" | "stale" | "weather-degraded" | "miscalibrated" | "refused" | "unreachable">("flagged");
   const [data, setData] = useState<DeviationsResponse | null>(null);
   const [boardState, setBoardState] = useState<BoardState>("loading");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -34,7 +34,9 @@ export default function App() {
           const simData = getScenarioData(scenario);
           setData(simData);
           setLastGoodReadingTime(simData.lastGoodReadingTimestamp);
-          if (simData.isAllWithinThreshold) {
+          if (simData.isMiscalibrated) {
+            setBoardState("miscalibrated");
+          } else if (simData.isAllWithinThreshold) {
             setBoardState("empty");
           } else {
             setBoardState("flagged");
@@ -72,7 +74,11 @@ export default function App() {
         setLastGoodReadingTime(json.lastGoodReadingTimestamp);
       }
 
-      if (json.isAllWithinThreshold) {
+      // Sanity check before render:
+      // If more than half the watched sites deviate by > 100%, baselines are miscalibrated
+      if (json.isMiscalibrated) {
+        setBoardState("miscalibrated");
+      } else if (json.isAllWithinThreshold) {
         setBoardState("empty");
       } else {
         setBoardState("flagged");
@@ -144,7 +150,7 @@ export default function App() {
                 <Layers className="w-3.5 h-3.5 text-stone-400" />
                 State:
               </span>
-              {(["flagged", "empty", "stale", "weather-degraded", "refused", "unreachable"] as const).map((sc) => (
+              {(["flagged", "empty", "stale", "weather-degraded", "miscalibrated", "refused", "unreachable"] as const).map((sc) => (
                 <button
                   key={sc}
                   onClick={() => {
@@ -186,6 +192,7 @@ export default function App() {
           flaggedSites={data ? data.flaggedExceptions : getScenarioData("flagged").flaggedExceptions}
           quietList={data ? data.quietList : getScenarioData("flagged").quietList}
           missingSites={data ? data.missingSites : getScenarioData("flagged").missingSites}
+          corruptedSites={data ? data.corruptedSites : []}
           onSelectSite={(id) => {
             const el = document.getElementById(`carpark-site-${id}`);
             if (el) {
@@ -208,6 +215,24 @@ export default function App() {
           />
         )}
 
+        {/* Baselines Miscalibrated Sanity Check State */}
+        {boardState === "miscalibrated" && data && (
+          <>
+            <MiscalibratedView
+              over100Count={data.over100Count || 0}
+              evaluatedCount={data.evaluatedCount}
+              timeLabel={data.timeContext?.timeLabel || "this hour"}
+              onRetry={() => loadData(true)}
+            />
+            <QuietRankedList
+              quietList={data.quietList}
+              missingSites={data.missingSites}
+              corruptedSites={data.corruptedSites}
+              omittedSites={data.omittedDueToNoBaseline}
+            />
+          </>
+        )}
+
         {/* Empty State Sentence (Good News) */}
         {boardState === "empty" && data && (
           <>
@@ -215,6 +240,7 @@ export default function App() {
             <QuietRankedList
               quietList={data.quietList}
               missingSites={data.missingSites}
+              corruptedSites={data.corruptedSites}
               omittedSites={data.omittedDueToNoBaseline}
             />
           </>
@@ -243,6 +269,7 @@ export default function App() {
             <QuietRankedList
               quietList={data.quietList}
               missingSites={data.missingSites}
+              corruptedSites={data.corruptedSites}
               omittedSites={data.omittedDueToNoBaseline}
             />
           </>

@@ -1,8 +1,84 @@
 import { DeviationsResponse } from "./types";
 
-export function getScenarioData(scenario: "flagged" | "empty" | "stale" | "weather-degraded"): DeviationsResponse {
+export function getScenarioData(scenario: "flagged" | "empty" | "stale" | "weather-degraded" | "miscalibrated"): DeviationsResponse {
   const baseTimestamp = new Date().toISOString();
   const oldTimestamp = new Date(Date.now() - 22 * 60 * 1000).toISOString(); // 22 minutes ago
+
+  if (scenario === "miscalibrated") {
+    return {
+      readingTimestamp: baseTimestamp,
+      minutesOld: 1,
+      isStale: false,
+      cacheAge: 12,
+      timeContext: {
+        dayType: "sunday",
+        hour: 19,
+        weekdayName: "Sunday",
+        period: "evening",
+        timeLabel: "Sunday evening"
+      },
+      isAllWithinThreshold: false,
+      isMiscalibrated: true,
+      miscalibrationReason: "11 of 14 evaluated sites deviate by over 100% from baseline.",
+      over100Count: 11,
+      totalWatchedCount: 14,
+      evaluatedCount: 14,
+      flaggedExceptions: [
+        {
+          id: "2",
+          development: "Marina Square",
+          area: "Marina",
+          lotsAvailable: 310,
+          totalLots: 2200,
+          actualOccupancyRate: 0.86,
+          expectedOccupancyRate: 0.12,
+          baselineOccupancyRate: 0.12,
+          observedOn: "2026-08-28",
+          rainFactor: 1.0,
+          nearestAreaName: "City",
+          nearestAreaForecast: "Fair",
+          distanceKm: 0.9,
+          deviation: 6.1667,
+          deviationPercent: 617,
+          deviationSignedStr: "+617%",
+          absDeviation: 6.1667,
+          plainSentence: "running 617% above its usual Sunday evening occupancy",
+          isFull: false
+        },
+        {
+          id: "4",
+          development: "The Centrepoint",
+          area: "Orchard",
+          lotsAvailable: 110,
+          totalLots: 850,
+          actualOccupancyRate: 0.87,
+          expectedOccupancyRate: 0.10,
+          baselineOccupancyRate: 0.10,
+          observedOn: "2026-08-29",
+          rainFactor: 1.0,
+          nearestAreaName: "Tanglin",
+          nearestAreaForecast: "Fair",
+          distanceKm: 1.2,
+          deviation: 7.7000,
+          deviationPercent: 770,
+          deviationSignedStr: "+770%",
+          absDeviation: 7.7000,
+          plainSentence: "running 770% above its usual Sunday evening occupancy",
+          isFull: false
+        }
+      ],
+      quietList: [],
+      missingSites: [],
+      corruptedSites: [],
+      omittedDueToNoBaseline: [],
+      weather: {
+        degraded: false,
+        reason: "",
+        unmatchedForecastStrings: []
+      },
+      lastGoodReadingTimestamp: baseTimestamp
+    };
+  }
 
   if (scenario === "empty") {
     return {

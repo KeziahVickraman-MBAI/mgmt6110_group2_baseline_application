@@ -118,3 +118,70 @@ export function UnreachableView({ lastGoodReadingTime, onRetry }: UnreachableVie
     </div>
   );
 }
+
+interface MiscalibratedViewProps {
+  over100Count: number;
+  evaluatedCount: number;
+  timeLabel?: string;
+  onRetry?: () => void;
+}
+
+/**
+ * Sanity check fail-safe state:
+ * "Baselines look miscalibrated — deviations suppressed"
+ * Displayed instead of the board when > 50% of evaluated sites deviate by > 100%.
+ */
+export function MiscalibratedView({
+  over100Count,
+  evaluatedCount,
+  timeLabel = "this hour",
+  onRetry
+}: MiscalibratedViewProps) {
+  return (
+    <div className="bg-amber-50/90 border border-amber-300/80 rounded-xl p-8 my-6 text-stone-900 shadow-xs">
+      <div className="flex items-start gap-4">
+        <div className="p-2.5 bg-amber-100 text-amber-900 rounded-lg shrink-0">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-xl font-bold text-stone-950 tracking-tight mb-1">
+              Baselines look miscalibrated — deviations suppressed
+            </h2>
+            <p className="text-stone-700 text-sm leading-relaxed">
+              {over100Count} of {evaluatedCount} evaluated carparks are deviating by more than 100% from their baseline for {timeLabel}. When more than half the watched sites deviate to this extreme, the baseline models are miscalibrated, not the real-world counts.
+            </p>
+          </div>
+
+          <div className="bg-white/80 border border-amber-200 rounded-lg p-3 text-xs text-stone-600 font-mono space-y-1">
+            <div className="flex justify-between">
+              <span>Sanity check rule:</span>
+              <span className="font-semibold text-stone-800">&gt; 50% of sites deviate by &gt; 100%</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Trigger status:</span>
+              <span className="text-amber-900 font-semibold">{over100Count} / {evaluatedCount} breached ({( (over100Count / evaluatedCount) * 100 ).toFixed(0)}%)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Failsafe action:</span>
+              <span className="text-rose-700 font-semibold">Priority rankings suppressed</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-stone-500">
+            Occupancy figures and baseline profiles require recalibration in constants before ranking resumes.
+          </p>
+
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="px-3.5 py-1.5 text-xs font-semibold text-stone-900 bg-white border border-stone-300 rounded hover:bg-stone-50 cursor-pointer shadow-xs transition-colors"
+            >
+              Re-evaluate Feeds
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

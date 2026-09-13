@@ -16,9 +16,11 @@ export interface EvaluatedSite {
   actualOccupancyRate: number;
   expectedOccupancyRate: number;
   baselineOccupancyRate: number;
+  observedOn?: string;
   rainFactor: number;
   nearestAreaName: string | null;
   nearestAreaForecast: string | null;
+  distanceKm?: number;
   deviation: number;
   deviationPercent: number;
   deviationSignedStr: string;
@@ -30,6 +32,15 @@ export interface EvaluatedSite {
 export interface MissingSite {
   id: string;
   development: string;
+  status: string;
+}
+
+export interface CorruptedSite {
+  id: string;
+  development: string;
+  area: string;
+  lotsAvailable: number;
+  totalLots: number;
   status: string;
 }
 
@@ -46,11 +57,15 @@ export interface DeviationsResponse {
     timeLabel: string;
   };
   isAllWithinThreshold: boolean;
+  isMiscalibrated?: boolean;
+  miscalibrationReason?: string | null;
+  over100Count?: number;
   totalWatchedCount: number;
   evaluatedCount: number;
   flaggedExceptions: EvaluatedSite[];
   quietList: EvaluatedSite[];
   missingSites: MissingSite[];
+  corruptedSites?: CorruptedSite[];
   omittedDueToNoBaseline: Array<{ id: string; development: string; reason: string }>;
   weather: {
     degraded: boolean;
@@ -63,5 +78,5 @@ export interface DeviationsResponse {
   isUnreachable?: boolean;
 }
 
-export type BoardState = "loading" | "empty" | "flagged" | "stale" | "refused" | "unreachable";
+export type BoardState = "loading" | "empty" | "flagged" | "stale" | "refused" | "unreachable" | "miscalibrated";
 export type NotifyState = "idle" | "submitting" | "sent" | "rejected" | "unreachable";

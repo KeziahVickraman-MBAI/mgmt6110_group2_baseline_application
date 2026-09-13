@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { EvaluatedSite, MissingSite } from "../types";
+import { EvaluatedSite, MissingSite, CorruptedSite } from "../types";
 import { Search, X, MapPin, CheckCircle, AlertTriangle, ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 interface CarparkSearchProps {
   flaggedSites: EvaluatedSite[];
   quietList: EvaluatedSite[];
   missingSites: MissingSite[];
+  corruptedSites?: CorruptedSite[];
   onSelectSite?: (siteId: string) => void;
 }
 
@@ -13,6 +14,7 @@ export function CarparkSearch({
   flaggedSites,
   quietList,
   missingSites,
+  corruptedSites = [],
   onSelectSite
 }: CarparkSearchProps) {
   const [query, setQuery] = useState("");
@@ -32,6 +34,7 @@ export function CarparkSearch({
       isFlagged: boolean;
       isFull: boolean;
       isMissing: boolean;
+      isCorrupted?: boolean;
       weatherArea?: string | null;
       weatherForecast?: string | null;
       rainFactor?: number;
@@ -80,6 +83,25 @@ export function CarparkSearch({
       });
     });
 
+    // Corrupted sites: available > total
+    corruptedSites.forEach((site) => {
+      list.push({
+        id: site.id,
+        development: site.development,
+        area: site.area,
+        lotsAvailable: site.lotsAvailable,
+        totalLots: site.totalLots,
+        occupancyRate: null,
+        deviationPercent: null,
+        deviationSignedStr: null,
+        isFlagged: false,
+        isFull: false,
+        isMissing: false,
+        isCorrupted: true,
+        plainSentence: "Reading looks wrong for this site"
+      });
+    });
+
     // Missing sites
     missingSites.forEach((site) => {
       list.push({
@@ -99,7 +121,7 @@ export function CarparkSearch({
     });
 
     return list;
-  }, [flaggedSites, quietList, missingSites]);
+  }, [flaggedSites, quietList, missingSites, corruptedSites]);
 
   // Filtered results based on search query and filter chips
   const filteredCarparks = useMemo(() => {
@@ -260,7 +282,12 @@ export function CarparkSearch({
 
                         {/* Status / Deviation Badge */}
                         <div>
-                          {site.isMissing ? (
+                          {site.isCorrupted ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 border border-rose-200 text-rose-800 font-mono text-[11px] font-semibold">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />
+                              Reading looks wrong for this site
+                            </span>
+                          ) : site.isMissing ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 font-mono text-[11px] font-semibold">
                               <AlertTriangle className="w-3 h-3" />
                               Feed Absent
@@ -294,7 +321,7 @@ export function CarparkSearch({
                       </div>
 
                       {/* Lot availability counts & progress meter */}
-                      {!site.isMissing && site.lotsAvailable !== null && (
+                      {!site.isMissing && !site.isCorrupted && site.lotsAvailable !== null && (
                         <div className="mt-1">
                           <div className="flex items-center justify-between text-[11px] font-mono mb-1 text-stone-600">
                             <span>

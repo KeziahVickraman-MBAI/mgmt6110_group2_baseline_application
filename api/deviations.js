@@ -46,7 +46,23 @@ export function getSingaporeTimeContext(date = new Date()) {
 }
 
 /**
- * Find nearest forecast area by straight-line distance
+ * Haversine formula for calculating spherical distance between two coordinates in kilometers
+ */
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Find nearest forecast area by Haversine distance
+ * Reads coordinates strictly by key (never by position)
  */
 function findNearestForecastArea(siteLat, siteLng, forecastAreas) {
   if (!forecastAreas || forecastAreas.length === 0) {
@@ -54,23 +70,24 @@ function findNearestForecastArea(siteLat, siteLng, forecastAreas) {
   }
 
   let nearest = null;
-  let minDistanceSq = Infinity;
-
-  const latRad = (siteLat * Math.PI) / 180;
-  const cosLat = Math.cos(latRad);
+  let minDistance = Infinity;
 
   for (const area of forecastAreas) {
-    const dLat = area.latitude - siteLat;
-    const dLng = (area.longitude - siteLng) * cosLat;
-    const distSq = dLat * dLat + dLng * dLng;
-
-    if (distSq < minDistanceSq) {
-      minDistanceSq = distSq;
-      nearest = area;
+    if (typeof area.latitude !== "number" || typeof area.longitude !== "number") continue;
+    const d = haversineDistanceKm(siteLat, siteLng, area.latitude, area.longitude);
+    if (d < minDistance) {
+      minDistance = d;
+      nearest = {
+        name: area.name,
+        forecast: area.forecast,
+        latitude: area.latitude,
+        longitude: area.longitude,
+        distanceKm: Number(d.toFixed(2))
+      };
     }
   }
 
-  return nearest;
+  return nearest || { name: "Singapore", forecast: "Unknown", distanceKm: 0 };
 }
 
 /**
@@ -114,7 +131,7 @@ export async function computeDeviations() {
     throw errorObj;
   }
 
-  const { sites, missingSiteIds, timestamp: readingTimestamp, cacheAge } = carparksData;
+  const { sites, missingSiteIds, corruptedSites = [], timestamp: readingTimestamp, cacheAge } = carparksData;
   const forecastAreas = weatherData ? weatherData.areas : [];
 
   const evaluatedSites = [];
@@ -122,12 +139,22 @@ export async function computeDeviations() {
 
   for (const site of sites) {
     const baselineObj = BASELINES[site.id];
-    const baselineRates = baselineObj ? baselineObj[timeContext.dayType] : null;
+
+    // "Until a site has a real baseline, EXCLUDE it from the ranking entirely rather than ranking it against a placeholder"
+    if (!baselineObj || !baselineObj.observedOn) {
+      omittedDueToNoBaseline.push({
+        id: site.id,
+        development: site.development,
+        reason: "No verified baseline with observedOn date"
+      });
+      continue;
+    }
+
+    const baselineRates = baselineObj[timeContext.dayType];
     const baselineRate = baselineRates && typeof baselineRates[timeContext.hour] === "number"
       ? baselineRates[timeContext.hour]
       : null;
 
-    // "If a site has no baseline entry for the current day-type and hour, omit it from the ranking entirely"
     if (baselineRate === null || baselineRate === undefined || baselineRate <= 0) {
       omittedDueToNoBaseline.push({
         id: site.id,
@@ -137,8 +164,11 @@ export async function computeDeviations() {
       continue;
     }
 
-    // Match nearest forecast area
+    // Match nearest forecast area using Haversine
     const nearestArea = findNearestForecastArea(site.latitude, site.longitude, forecastAreas);
+
+    // Log every site-to-area match with the computed distance in kilometres
+    console.log(`[AREA MATCH] Site ${site.id} (${site.development}, ${site.area}) -> Nearest area: "${nearestArea.name}" (${nearestArea.distanceKm} km, forecast: "${nearestArea.forecast}")`);
 
     let rainFactor = 1.00;
     let adjustmentPhrase = "";
@@ -156,7 +186,7 @@ export async function computeDeviations() {
 
       // Format adjustment description: e.g. "adjusted for light rain in Bukit Merah"
       const forecastLower = nearestArea.forecast.toLowerCase();
-      adjustmentPhrase = `adjusted for ${forecastLower} in ${nearestArea.name}`;
+      adjustmentPhrase = `adjusted for ${forecastLower} in ${nearestArea.name} (${nearestArea.distanceKm}km)`;
     }
 
     const expectedOccupancy = Number((baselineRate * rainFactor).toFixed(4));
@@ -187,9 +217,11 @@ export async function computeDeviations() {
       actualOccupancyRate: actualOccupancy,
       expectedOccupancyRate: expectedOccupancy,
       baselineOccupancyRate: baselineRate,
+      observedOn: baselineObj.observedOn,
       rainFactor,
       nearestAreaName: nearestArea ? nearestArea.name : null,
       nearestAreaForecast: nearestArea ? nearestArea.forecast : null,
+      distanceKm: nearestArea ? nearestArea.distanceKm : 0,
       deviation: Number(deviation.toFixed(4)),
       deviationPercent,
       deviationSignedStr: (deviationPercent > 0 ? "+" : "") + `${deviationPercent}%`,
@@ -201,6 +233,18 @@ export async function computeDeviations() {
 
   // Sort by absolute deviation descending
   evaluatedSites.sort((a, b) => b.absDeviation - a.absDeviation);
+
+  // SANITY CHECK: if more than half the watched sites deviate by over 100%,
+  // the baselines are wrong, not the world.
+  const over100Deviations = evaluatedSites.filter(s => s.absDeviation > 1.0);
+  const isMiscalibrated = evaluatedSites.length > 0 && (over100Deviations.length > evaluatedSites.length / 2);
+  const miscalibrationReason = isMiscalibrated
+    ? `${over100Deviations.length} of ${evaluatedSites.length} evaluated sites deviate by over 100% from baseline.`
+    : null;
+
+  if (isMiscalibrated) {
+    console.warn(`[SANITY CHECK] Baselines look miscalibrated (${over100Deviations.length}/${evaluatedSites.length} sites > 100% deviation). Deviations suppressed.`);
+  }
 
   // Determine threshold breaches (beyond 10% deviation, i.e. absDeviation > 0.10)
   const breachedSites = evaluatedSites.filter(s => s.absDeviation > 0.10);
@@ -235,11 +279,15 @@ export async function computeDeviations() {
     cacheAge,
     timeContext,
     isAllWithinThreshold,
+    isMiscalibrated,
+    miscalibrationReason,
+    over100Count: over100Deviations.length,
     totalWatchedCount: WATCHED_SITES.length,
     evaluatedCount: evaluatedSites.length,
     flaggedExceptions,
     quietList,
     missingSites,
+    corruptedSites,
     omittedDueToNoBaseline,
     weather: {
       degraded: weatherDegraded,

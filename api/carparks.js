@@ -76,6 +76,7 @@ export async function fetchCarparksData() {
   // Build the filtered list against our WATCHED sites
   const sites = [];
   const missingSiteIds = [];
+  const corruptedSites = [];
 
   for (const watched of WATCHED_SITES) {
     const ltaItem = ltaMap.get(watched.id);
@@ -88,38 +89,75 @@ export async function fetchCarparksData() {
 
     // CAST EVERY NUMBER carefully. AvailableLots can be a string in some payloads.
     const rawAvailable = ltaItem.AvailableLots;
-    const availableLots = Number(rawAvailable);
+    let availableLots = Number(rawAvailable);
 
     if (isNaN(availableLots) || availableLots === null) {
       missingSiteIds.push(watched.id);
       continue;
     }
 
-    // Use LTA total lots if valid and provided, otherwise fallback to watched site's verified capacity
+    // Check if feed provides total lots (TotalLots, Lots, Capacity, etc.)
     let totalLots = watched.totalLots;
-    if (ltaItem.TotalLots !== undefined && ltaItem.TotalLots !== null && ltaItem.TotalLots !== "") {
-      const parsedTotal = Number(ltaItem.TotalLots);
-      if (!isNaN(parsedTotal) && parsedTotal > 0) {
-        totalLots = parsedTotal;
+    let feedTotal = null;
+    for (const key of ["TotalLots", "totalLots", "Total", "Lots", "Capacity"]) {
+      if (ltaItem[key] !== undefined && ltaItem[key] !== null && ltaItem[key] !== "") {
+        const parsed = Number(ltaItem[key]);
+        if (!isNaN(parsed) && parsed > 0) {
+          feedTotal = parsed;
+          break;
+        }
       }
     }
 
-    // Occupancy rate calculation (clamped 0 to 1)
-    // When availableLots is 0, occupancy is 1.0 (Full)
-    const occupiedLots = Math.max(0, totalLots - availableLots);
-    const occupancyRate = totalLots > 0 ? Math.max(0, Math.min(1, occupiedLots / totalLots)) : 0;
+    if (feedTotal !== null) {
+      // If the feed provides both, check they are not swapped
+      if (availableLots > feedTotal && feedTotal > 0) {
+        if (feedTotal <= availableLots && availableLots >= (watched.totalLots * 0.8)) {
+          const temp = availableLots;
+          availableLots = feedTotal;
+          totalLots = temp;
+        } else {
+          totalLots = feedTotal;
+        }
+      } else {
+        totalLots = feedTotal;
+      }
+    }
 
-    // Parse location coordinates if available in LTA (space separated "lat lng")
+    // GUARD: if available > total, that site shows "Reading looks wrong for this site"
+    // and is excluded from the ranking. Never clamp a nonsensical number into a plausible-looking one.
+    if (availableLots > totalLots) {
+      console.warn(`[DATA GUARD] Available lots (${availableLots}) exceeds total lots (${totalLots}) for site ${watched.id} (${watched.development}). Flagging as "Reading looks wrong for this site" and excluding from ranking.`);
+      corruptedSites.push({
+        id: watched.id,
+        development: watched.development,
+        area: watched.area,
+        lotsAvailable: availableLots,
+        totalLots: totalLots,
+        status: "Reading looks wrong for this site"
+      });
+      continue;
+    }
+
+    // Safe Occupancy rate calculation (only when availableLots <= totalLots)
+    const occupiedLots = totalLots - availableLots;
+    const occupancyRate = totalLots > 0 ? (occupiedLots / totalLots) : 0;
+
+    // Parse location coordinates if available in LTA (space or comma separated "lat lng" or "lat,lng")
     let latitude = watched.latitude;
     let longitude = watched.longitude;
     if (typeof ltaItem.Location === "string" && ltaItem.Location.trim()) {
-      const parts = ltaItem.Location.trim().split(/\s+/);
+      const parts = ltaItem.Location.trim().split(/[\s,]+/);
       if (parts.length >= 2) {
-        const pLat = Number(parts[0]);
-        const pLng = Number(parts[1]);
-        if (!isNaN(pLat) && !isNaN(pLng) && pLat > 0) {
-          latitude = pLat;
-          longitude = pLng;
+        const p0 = Number(parts[0]);
+        const p1 = Number(parts[1]);
+        // Verify coordinate ordering for Singapore (lat ~1.2-1.45, lng ~103.6-104.0)
+        if (p0 >= 1.0 && p0 <= 1.5 && p1 >= 103.0 && p1 <= 104.5) {
+          latitude = p0;
+          longitude = p1;
+        } else if (p1 >= 1.0 && p1 <= 1.5 && p0 >= 103.0 && p0 <= 104.5) {
+          latitude = p1;
+          longitude = p0;
         }
       }
     }
@@ -141,7 +179,8 @@ export async function fetchCarparksData() {
     timestamp: readingTimestamp,
     cacheAge: 0,
     sites,
-    missingSiteIds
+    missingSiteIds,
+    corruptedSites
   };
 
   memoryCache = {

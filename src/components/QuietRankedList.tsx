@@ -1,13 +1,14 @@
-import { EvaluatedSite, MissingSite } from "../types";
+import { EvaluatedSite, MissingSite, CorruptedSite } from "../types";
 
 interface QuietRankedListProps {
   quietList: EvaluatedSite[];
   missingSites: MissingSite[];
+  corruptedSites?: CorruptedSite[];
   omittedSites?: Array<{ id: string; development: string; reason: string }>;
 }
 
-export function QuietRankedList({ quietList, missingSites, omittedSites }: QuietRankedListProps) {
-  const hasItems = quietList.length > 0 || missingSites.length > 0 || (omittedSites && omittedSites.length > 0);
+export function QuietRankedList({ quietList, missingSites, corruptedSites = [], omittedSites }: QuietRankedListProps) {
+  const hasItems = quietList.length > 0 || missingSites.length > 0 || corruptedSites.length > 0 || (omittedSites && omittedSites.length > 0);
 
   if (!hasItems) return null;
 
@@ -18,7 +19,7 @@ export function QuietRankedList({ quietList, missingSites, omittedSites }: Quiet
           Other Watched Sites (Within Normal Range or Unflagged)
         </h3>
         <span className="text-xs text-stone-600 font-mono">
-          {quietList.length} reported · {missingSites.length} missing
+          {quietList.length} reported · {missingSites.length} missing {corruptedSites.length > 0 ? `· ${corruptedSites.length} corrupted` : ""}
         </span>
       </div>
 
@@ -50,7 +51,7 @@ export function QuietRankedList({ quietList, missingSites, omittedSites }: Quiet
                     <span>{site.area}</span>
                     {site.nearestAreaName && (
                       <span className="text-stone-600 text-[11px] block">
-                        near {site.nearestAreaName} ({site.nearestAreaForecast || "Fair"})
+                        near {site.nearestAreaName} {site.distanceKm ? `(${site.distanceKm}km)` : ""} · {site.nearestAreaForecast || "Fair"}
                       </span>
                     )}
                   </td>
@@ -80,9 +81,27 @@ export function QuietRankedList({ quietList, missingSites, omittedSites }: Quiet
               );
             })}
 
+            {/* Corrupted sites: available > total, excluded from ranking */}
+            {corruptedSites.map((corrupted) => (
+              <tr key={corrupted.id} id={`carpark-site-${corrupted.id}`} className="bg-amber-50/50 text-stone-700">
+                <td className="py-2.5 px-3.5 font-medium text-stone-900">
+                  {corrupted.development}
+                </td>
+                <td className="py-2.5 px-3 text-stone-600">
+                  {corrupted.area}
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono text-amber-900 font-semibold">
+                  {corrupted.lotsAvailable.toLocaleString()} / {corrupted.totalLots.toLocaleString()}
+                </td>
+                <td colSpan={3} className="py-2.5 px-3.5 text-right font-mono text-rose-700 font-medium italic">
+                  Reading looks wrong for this site
+                </td>
+              </tr>
+            ))}
+
             {/* Missing sites: never report 0 lots, explicitly report "No reading for this site" */}
             {missingSites.map((missing) => (
-              <tr key={missing.id} className="bg-stone-50/40 text-stone-600">
+              <tr key={missing.id} id={`carpark-site-${missing.id}`} className="bg-stone-50/40 text-stone-600">
                 <td className="py-2.5 px-3.5 font-medium text-stone-600">
                   {missing.development}
                 </td>
@@ -95,7 +114,7 @@ export function QuietRankedList({ quietList, missingSites, omittedSites }: Quiet
 
             {/* Omitted due to no baseline */}
             {omittedSites && omittedSites.map((omitted) => (
-              <tr key={omitted.id} className="bg-stone-50/30 text-stone-600">
+              <tr key={omitted.id} id={`carpark-site-${omitted.id}`} className="bg-stone-50/30 text-stone-600">
                 <td className="py-2 px-3.5 font-medium text-stone-600">
                   {omitted.development}
                 </td>
