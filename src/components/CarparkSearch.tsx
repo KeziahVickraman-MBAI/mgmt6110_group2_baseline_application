@@ -154,15 +154,18 @@ export function CarparkSearch({
   }, [allCarparks, query, selectedFilter]);
 
   const filterChips = [
-    { id: "all", label: "All Carparks" },
+    { id: "all", label: "All Near Campus" },
     { id: "flagged", label: "Flagged Exceptions" },
-    { id: "Orchard", label: "Orchard" },
+    { id: "City", label: "City / Bras Basah" },
     { id: "Marina", label: "Marina" },
-    { id: "City", label: "City / CBD" },
-    { id: "HarbourFront", label: "HarbourFront" },
+    { id: "Orchard", label: "Orchard / Somerset" },
     { id: "available", label: "Available > 100 Lots" },
     { id: "full", label: "Full / Near Full" }
   ];
+
+  const totalWatched = allCarparks.length;
+  const excludedCount = (corruptedSites?.length || 0) + (missingSites?.length || 0);
+  const baselinesCount = allCarparks.filter(s => !s.isCorrupted && !s.isMissing).length;
 
   return (
     <section className="mb-8 bg-white border border-stone-200/90 rounded-xl p-5 shadow-xs">
@@ -172,15 +175,12 @@ export function CarparkSearch({
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-stone-700" />
             <h2 className="text-sm font-semibold tracking-tight text-stone-900">
-              Search Singapore Carparks
+              8 sites near campus
             </h2>
-            <span className="text-xs text-stone-400 font-mono">
-              ({allCarparks.length} monitored sites)
-            </span>
           </div>
 
           <div className="text-xs text-stone-500 font-mono">
-            {filteredCarparks.length} carpark{filteredCarparks.length === 1 ? "" : "s"} found
+            {filteredCarparks.length} {filteredCarparks.length === 1 ? "site" : "sites"} near campus
           </div>
         </div>
 
@@ -191,7 +191,7 @@ export function CarparkSearch({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by carpark name, area, or ID (e.g. Suntec, VivoCity, ION Orchard, Marina, Jurong, Tampines, 10)..."
+            placeholder="Search carparks near campus (e.g. Suntec, Raffles City, Marina Square, Somerset)..."
             className="w-full pl-9 pr-9 py-2 text-sm bg-stone-50/70 border border-stone-300 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:bg-white transition-all shadow-2xs"
           />
           {query && (
@@ -226,6 +226,11 @@ export function CarparkSearch({
           })}
         </div>
 
+        {/* Coverage line beneath the filters */}
+        <div className="pt-2 border-t border-stone-100 text-xs font-mono text-stone-500">
+          {totalWatched} watched · {baselinesCount} with baselines · {excludedCount} excluded
+        </div>
+
         {/* Search Results Display */}
         {(query.trim() !== "" || selectedFilter !== "all") && (
           <div className="mt-2 pt-3 border-t border-stone-100">
@@ -235,7 +240,7 @@ export function CarparkSearch({
                   No carparks matching &ldquo;{query}&rdquo;
                 </p>
                 <p className="text-xs text-stone-400">
-                  Try searching for mall names (e.g. &ldquo;VivoCity&rdquo;, &ldquo;Suntec&rdquo;) or areas (e.g. &ldquo;Orchard&rdquo;, &ldquo;Marina&rdquo;).
+                  Try searching for sites near campus (e.g. Suntec, Raffles City, Marina Square, Orchard Central).
                 </p>
                 <button
                   onClick={() => {

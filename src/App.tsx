@@ -256,17 +256,17 @@ export default function App() {
           <>
             {/* E. One decision line above everything */}
             <div
-              id="dispatcher-decision-line"
+              id="campus-status-decision-line"
               className="mb-6 bg-stone-900 text-stone-100 rounded-xl p-6 border border-stone-800 shadow-xs"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-950 font-mono tracking-wider uppercase">
-                  Duty Decision
+                  Morning Arrival
                 </span>
-                <span className="text-xs text-stone-400 font-mono">Next 60 Minutes • Attendant Deployment</span>
+                <span className="text-xs text-stone-400 font-mono">Next 60 Minutes • Campus Proximity</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1.5">
-                {data.decisionHeadline || "Two sites need attention before the evening peak."}
+                {data.decisionHeadline || "Sites near campus behaving normally."}
               </h1>
               {data.decisionSubtext && (
                 <p className="text-sm sm:text-base text-stone-300 leading-relaxed max-w-3xl">
@@ -274,11 +274,6 @@ export default function App() {
                 </p>
               )}
             </div>
-
-            {/* C. Distance between flagged sites & one/two trip guidance */}
-            {data.flaggedDistance && (
-              <FlaggedDistanceBanner distance={data.flaggedDistance} />
-            )}
 
             {/* A. Two columns split by direction */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -288,11 +283,11 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
                     <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
-                      Needs Attention
+                      Filling Faster Than Usual
                     </h2>
                   </div>
                   <span className="text-xs text-stone-500 font-medium">
-                    Queues forming · Barriers backing up
+                    Above normal baseline
                   </span>
                 </div>
 
@@ -301,7 +296,7 @@ export default function App() {
                 ) : (
                   <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
                     <CheckCircle2 className="w-8 h-8 text-stone-400 mb-2" />
-                    <p className="text-stone-700 font-medium text-sm">No queues forming</p>
+                    <p className="text-stone-700 font-medium text-sm">No unusual demand</p>
                     <p className="text-stone-500 text-xs mt-1">
                       No carparks running significantly above normal baseline.
                     </p>
@@ -315,11 +310,11 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-100"></span>
                     <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
-                      Has Capacity
+                      More Space Than Usual
                     </h2>
                   </div>
                   <span className="text-xs text-stone-500 font-medium">
-                    Attendant with nothing to do
+                    Below normal baseline
                   </span>
                 </div>
 
@@ -328,7 +323,7 @@ export default function App() {
                 ) : (
                   <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
                     <UserCheck className="w-8 h-8 text-stone-400 mb-2" />
-                    <p className="text-stone-700 font-medium text-sm">No attendant surplus</p>
+                    <p className="text-stone-700 font-medium text-sm">Normal occupancy</p>
                     <p className="text-stone-500 text-xs mt-1">
                       All sites are operating at or near normal baseline.
                     </p>

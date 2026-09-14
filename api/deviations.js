@@ -214,11 +214,11 @@ export async function computeDeviations() {
     if (carsDiff > 0) {
       direction = "above";
       carsHeadline = `${carsDiff.toLocaleString()} cars above normal`;
-      actionText = "Send someone.";
+      actionText = "Filling faster than usual.";
     } else if (carsDiff < 0) {
       direction = "below";
       carsHeadline = `${absCarsDiff.toLocaleString()} cars below normal`;
-      actionText = "Floater available here.";
+      actionText = "More capacity available than usual.";
     }
 
     // Build plain sentence
@@ -293,48 +293,22 @@ export async function computeDeviations() {
 
   const isAllWithinThreshold = !topAbove && !topBelow;
 
-  // Calculate distance between flagged sites if both exist
-  let flaggedDistance = null;
-  if (topAbove && topBelow) {
-    const dist = haversineDistanceKm(
-      topAbove.latitude,
-      topAbove.longitude,
-      topBelow.latitude,
-      topBelow.longitude
-    );
-    const distanceKm = Number(dist.toFixed(1));
-    const isOneTrip = distanceKm <= 5.0; // 5km hardcoded threshold
-    const tripSummary = isOneTrip ? "One trip" : "Two trips";
-    const tripDescription = isOneTrip
-      ? `${distanceKm} km apart — one trip. A single floater can cover both sites.`
-      : `${distanceKm} km apart — two trips required. The dispatcher cannot be in two places at once; sites are too far for one floater.`;
-
-    flaggedDistance = {
-      distanceKm,
-      isOneTrip,
-      tripSummary,
-      tripDescription,
-      origin: topBelow.development,
-      destination: topAbove.development
-    };
-  }
+  // No travel distance calculation needed for student campus decision
+  const flaggedDistance = null;
 
   // ONE DECISION LINE ABOVE EVERYTHING
-  // Generated directly from the flagged sites for the duty dispatcher
-  let decisionHeadline = "Nothing needs a floater right now.";
-  let decisionSubtext = "All watched carparks are operating within normal baseline limits.";
+  let decisionHeadline = "All carparks near campus are operating within normal baseline.";
+  let decisionSubtext = "Occupancy across all watched sites near campus is within expected levels for this hour.";
 
   if (topAbove && topBelow) {
-    decisionHeadline = `Two sites need attention before the ${timeContext.period} peak.`;
-    decisionSubtext = flaggedDistance && flaggedDistance.isOneTrip
-      ? `Redeploy floater from ${topBelow.development} to ${topAbove.development} (${flaggedDistance.distanceKm} km — single trip).`
-      : `Send floater to ${topAbove.development}; ${topBelow.development} has capacity but is ${flaggedDistance?.distanceKm} km away (two trips).`;
+    decisionHeadline = `Two sites near campus deviating from normal baseline.`;
+    decisionSubtext = `${topAbove.development} is filling faster than usual (${topAbove.carsHeadline}); ${topBelow.development} has extra space (${topBelow.carsHeadline}).`;
   } else if (topAbove) {
-    decisionHeadline = `Send floater to ${topAbove.development} — queues forming.`;
-    decisionSubtext = `${topAbove.carsHeadline} (${topAbove.deviationSignedStr} vs baseline). No sites currently reporting excess attendant capacity.`;
+    decisionHeadline = `${topAbove.development} is filling faster than normal.`;
+    decisionSubtext = `${topAbove.carsHeadline} (${topAbove.deviationSignedStr} vs baseline). Consider leaving earlier or heading to an alternative campus carpark.`;
   } else if (topBelow) {
-    decisionHeadline = `Floater available at ${topBelow.development}; all other sites normal.`;
-    decisionSubtext = `${topBelow.carsHeadline} (${topBelow.deviationSignedStr} vs baseline). No queue bottlenecks reported.`;
+    decisionHeadline = `${topBelow.development} has more space than usual.`;
+    decisionSubtext = `${topBelow.carsHeadline} (${topBelow.deviationSignedStr} vs baseline). Other campus carparks operating near normal baseline.`;
   }
 
   // Flagged set for quiet list

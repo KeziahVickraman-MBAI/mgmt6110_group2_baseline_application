@@ -22,7 +22,7 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
     ? `${absCarsDiff.toLocaleString()} cars above normal`
     : `${absCarsDiff.toLocaleString()} cars below normal`;
 
-  const actionText = isAbove ? "Send someone." : "Floater available here.";
+  const actionText = site.actionText || (isAbove ? "Filling faster than usual." : "More space available than usual.");
 
   return (
     <div
@@ -47,12 +47,12 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
               {isAbove ? (
                 <>
                   <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Top queue risk</span>
+                  <span>Above baseline</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 text-sky-700" />
-                  <span>Attendant surplus</span>
+                  <span>Below baseline</span>
                 </>
               )}
             </span>
@@ -146,14 +146,14 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
       >
         <div className="flex items-center gap-2">
           {isAbove ? (
-            <Send className="w-4 h-4 text-amber-700" />
+            <AlertCircle className="w-4 h-4 text-amber-700" />
           ) : (
-            <UserCheck className="w-4 h-4 text-sky-700" />
+            <CheckCircle2 className="w-4 h-4 text-sky-700" />
           )}
           <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-            Action:
+            Status:
           </span>
-          <span className="text-base font-extrabold tracking-tight">
+          <span className="text-sm sm:text-base font-bold tracking-tight">
             {actionText}
           </span>
         </div>

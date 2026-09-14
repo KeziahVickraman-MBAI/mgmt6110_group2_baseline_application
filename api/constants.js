@@ -13,7 +13,7 @@
  * }
  */
 
-// 14 watched carparks covering major commercial, shopping, and transit hubs across Singapore.
+// 8 watched carparks within realistic walking distance of the Bras Basah campus (SMU)
 export const WATCHED_SITES = [
   {
     id: "1",
@@ -78,54 +78,6 @@ export const WATCHED_SITES = [
     totalLots: 200,
     latitude: 1.3048,
     longitude: 103.8332
-  },
-  {
-    id: "9",
-    development: "Ngee Ann City",
-    area: "Orchard",
-    totalLots: 1250,
-    latitude: 1.3025,
-    longitude: 103.8344
-  },
-  {
-    id: "10",
-    development: "VivoCity",
-    area: "HarbourFront",
-    totalLots: 2180,
-    latitude: 1.2644,
-    longitude: 103.8222
-  },
-  {
-    id: "11",
-    development: "HarbourFront Centre",
-    area: "HarbourFront",
-    totalLots: 950,
-    latitude: 1.2642,
-    longitude: 103.8188
-  },
-  {
-    id: "12",
-    development: "Jurong Point",
-    area: "Jurong West",
-    totalLots: 1420,
-    latitude: 1.3404,
-    longitude: 103.7060
-  },
-  {
-    id: "13",
-    development: "Tampines Mall",
-    area: "Tampines",
-    totalLots: 640,
-    latitude: 1.3526,
-    longitude: 103.9452
-  },
-  {
-    id: "14",
-    development: "Parkway Parade",
-    area: "Marine Parade",
-    totalLots: 1200,
-    latitude: 1.3018,
-    longitude: 103.9052
   }
 ];
 
