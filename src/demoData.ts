@@ -349,7 +349,7 @@ export function getScenarioData(
     deviation: isRainAdjusted ? 2.32 : 1.93,
     deviationPercent: isRainAdjusted ? 232 : 193,
     deviationSignedStr: isRainAdjusted ? "+232%" : "+193%",
-    absDeviation: isRainAdjusted ? 2.32 : 1.93,
+    absDeviation: isRainAdjusted ? 0.41 : 0.40,
     plainSentence: isRainAdjusted
       ? "running 232% above its usual weekday afternoon availability, after lowering the expectation 12% for heavy rain in City"
       : "running 193% above its usual weekday afternoon availability. No weather adjustment — clear in City",

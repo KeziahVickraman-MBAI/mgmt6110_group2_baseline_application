@@ -205,7 +205,15 @@ export async function computeDeviations() {
     const carsDiff = actualLotsOccupied - expectedLotsOccupied; // > 0 = above normal, < 0 = below normal
     const absCarsDiff = Math.abs(carsDiff);
 
-    // Deviations:
+    // Occupancy rate calculation (for baseline model calibration guard)
+    const actualOccupancyRate = Number(site.occupancyRate);
+    const expectedOccupancyRate = Number(((totalLots - expectedAdjusted) / totalLots).toFixed(4));
+    const occupancyDeviation = expectedOccupancyRate > 0
+      ? (actualOccupancyRate - expectedOccupancyRate) / expectedOccupancyRate
+      : 0;
+    const absOccupancyDeviation = Math.abs(occupancyDeviation);
+
+    // Deviations (availability lots):
     // deviationRaw: against the unadjusted baseline
     const deviationRaw = expectedRaw > 0
       ? Math.round(((actualAvailable - expectedRaw) / expectedRaw) * 100)
@@ -218,7 +226,7 @@ export async function computeDeviations() {
 
     // Backward compatible deviation (signed float, e.g. -0.39 or +1.63)
     const deviation = Number((deviationAdjusted / 100).toFixed(4));
-    const absDeviation = Math.abs(deviation);
+    const absDeviation = Number(absOccupancyDeviation.toFixed(4));
     const deviationPercent = deviationAdjusted;
     const deviationSignedStr = (deviationAdjusted > 0 ? "+" : "") + `${deviationAdjusted}%`;
 
