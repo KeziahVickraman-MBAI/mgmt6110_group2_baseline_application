@@ -171,40 +171,56 @@ export async function computeDeviations() {
     console.log(`[AREA MATCH] Site ${site.id} (${site.development}, ${site.area}) -> Nearest area: "${nearestArea.name}" (${nearestArea.distanceKm} km, forecast: "${nearestArea.forecast}")`);
 
     let rainFactor = 1.00;
-    let adjustmentPhrase = "";
 
     if (weatherDegraded || !nearestArea) {
       rainFactor = 1.00;
-      adjustmentPhrase = "";
     } else {
       const factorResult = getRainFactor(nearestArea.forecast);
-      rainFactor = factorResult.factor;
+      rainFactor = typeof factorResult.factor === "number" && !isNaN(factorResult.factor) ? factorResult.factor : 1.00;
 
       if (factorResult.isUnmatched) {
         unmatchedForecastStrings.add(nearestArea.forecast);
       }
-
-      // Format adjustment description: e.g. "adjusted for light rain in Bukit Merah"
-      const forecastLower = nearestArea.forecast.toLowerCase();
-      adjustmentPhrase = `adjusted for ${forecastLower} in ${nearestArea.name} (${nearestArea.distanceKm}km)`;
     }
 
-    const expectedOccupancy = Number((baselineRate * rainFactor).toFixed(4));
-    const actualOccupancy = site.occupancyRate;
+    // Safety fallback: if rainFactor missing or unrecognised, fallback to 1.00 and log
+    if (typeof rainFactor !== "number" || isNaN(rainFactor) || rainFactor <= 0) {
+      console.warn(`[RAIN FACTOR] Invalid factor for site ${site.id}. Falling back to 1.00.`);
+      rainFactor = 1.00;
+    }
 
-    // Lots affected calculation (cars above or below expected)
-    const actualLotsOccupied = site.totalLots - site.lotsAvailable;
-    const expectedLotsOccupied = Math.round(expectedOccupancy * site.totalLots);
+    // Cast every number at the boundary
+    const actualAvailable = Number(site.lotsAvailable);
+    const totalLots = Number(site.totalLots);
+
+    // expectedRaw: baseline expected available lots
+    const expectedRaw = Number(Math.round((1 - baselineRate) * totalLots));
+
+    // expectedAdjusted: baseline expected available lots adjusted by rainFactor
+    const expectedAdjusted = Number(Math.round(expectedRaw * rainFactor));
+
+    // Lots affected calculation (cars occupied above or below expected)
+    const actualLotsOccupied = totalLots - actualAvailable;
+    const expectedLotsOccupied = totalLots - expectedAdjusted;
     const carsDiff = actualLotsOccupied - expectedLotsOccupied; // > 0 = above normal, < 0 = below normal
     const absCarsDiff = Math.abs(carsDiff);
 
-    // Deviation = (actual occupancy - expected occupancy) / expected occupancy, signed percentage
-    const deviation = expectedOccupancy > 0 
-      ? (actualOccupancy - expectedOccupancy) / expectedOccupancy 
+    // Deviations:
+    // deviationRaw: against the unadjusted baseline
+    const deviationRaw = expectedRaw > 0
+      ? Math.round(((actualAvailable - expectedRaw) / expectedRaw) * 100)
       : 0;
 
-    const deviationPercent = Math.round(deviation * 100);
+    // deviationAdjusted: against baseline * rainFactor
+    const deviationAdjusted = expectedAdjusted > 0
+      ? Math.round(((actualAvailable - expectedAdjusted) / expectedAdjusted) * 100)
+      : 0;
+
+    // Backward compatible deviation (signed float, e.g. -0.39 or +1.63)
+    const deviation = Number((deviationAdjusted / 100).toFixed(4));
     const absDeviation = Math.abs(deviation);
+    const deviationPercent = deviationAdjusted;
+    const deviationSignedStr = (deviationAdjusted > 0 ? "+" : "") + `${deviationAdjusted}%`;
 
     // Direction and Headline figures
     let direction = "normal";
@@ -221,20 +237,31 @@ export async function computeDeviations() {
       actionText = "More capacity available than usual.";
     }
 
-    // Build plain sentence
-    const absPercent = Math.abs(deviationPercent);
-    const dirWord = deviation >= 0 ? "above" : "below";
-    let plainSentence = `running ${absPercent}% ${dirWord} its usual ${timeContext.timeLabel} occupancy`;
-    if (adjustmentPhrase) {
-      plainSentence += `, ${adjustmentPhrase}`;
+    // Build plain sentence branching on the factor
+    const absPercent = Math.abs(deviationAdjusted);
+    const dirWord = deviationAdjusted >= 0 ? "above" : "below";
+    let plainSentence = "";
+
+    if (rainFactor === 1.00 || weatherDegraded || !nearestArea) {
+      let weatherDesc = "clear in City";
+      if (!weatherDegraded && nearestArea && nearestArea.forecast) {
+        weatherDesc = `${nearestArea.forecast.toLowerCase()} in ${nearestArea.name}`;
+      }
+      plainSentence = `running ${absPercent}% ${dirWord} its usual ${timeContext.timeLabel} availability. No weather adjustment — ${weatherDesc}`;
+    } else {
+      const loweringPercent = Math.round((1 - rainFactor) * 100);
+      const weatherDesc = nearestArea && nearestArea.forecast
+        ? `${nearestArea.forecast.toLowerCase()} in ${nearestArea.name}`
+        : "heavy rain in City";
+      plainSentence = `running ${absPercent}% ${dirWord} its usual ${timeContext.timeLabel} availability, after lowering the expectation ${loweringPercent}% for ${weatherDesc}`;
     }
 
     evaluatedSites.push({
       id: site.id,
       development: site.development,
       area: site.area,
-      lotsAvailable: site.lotsAvailable,
-      totalLots: site.totalLots,
+      lotsAvailable: actualAvailable,
+      totalLots,
       actualLotsOccupied,
       expectedLotsOccupied,
       carsDiff,
@@ -242,22 +269,26 @@ export async function computeDeviations() {
       carsHeadline,
       actionText,
       direction,
-      latitude: site.latitude,
-      longitude: site.longitude,
-      actualOccupancyRate: actualOccupancy,
-      expectedOccupancyRate: expectedOccupancy,
+      latitude: Number(site.latitude),
+      longitude: Number(site.longitude),
+      actualOccupancyRate: site.occupancyRate,
+      expectedOccupancyRate: Number(((totalLots - expectedAdjusted) / totalLots).toFixed(4)),
       baselineOccupancyRate: baselineRate,
+      expectedRaw,
+      expectedAdjusted,
+      deviationRaw,
+      deviationAdjusted,
       observedOn: baselineObj.observedOn,
-      rainFactor,
+      rainFactor: Number(rainFactor.toFixed(2)),
       nearestAreaName: nearestArea ? nearestArea.name : null,
       nearestAreaForecast: nearestArea ? nearestArea.forecast : null,
-      distanceKm: nearestArea ? nearestArea.distanceKm : 0,
-      deviation: Number(deviation.toFixed(4)),
+      distanceKm: nearestArea ? Number(nearestArea.distanceKm) : 0,
+      deviation,
       deviationPercent,
-      deviationSignedStr: (deviationPercent > 0 ? "+" : "") + `${deviationPercent}%`,
-      absDeviation: Number(absDeviation.toFixed(4)),
+      deviationSignedStr,
+      absDeviation,
       plainSentence,
-      isFull: site.lotsAvailable === 0
+      isFull: actualAvailable === 0
     });
   }
 
@@ -280,11 +311,11 @@ export async function computeDeviations() {
   const thresholdCars = 15;   // at least 15 cars affected to qualify as a substantial operational deviation
 
   const aboveSites = evaluatedSites
-    .filter(s => s.carsDiff > 0 && s.deviation > thresholdRate && s.carsDiff >= thresholdCars)
+    .filter(s => s.carsDiff > 0 && s.absDeviation >= thresholdRate && s.carsDiff >= thresholdCars)
     .sort((a, b) => b.carsDiff - a.carsDiff);
 
   const belowSites = evaluatedSites
-    .filter(s => s.carsDiff < 0 && s.deviation < -thresholdRate && s.absCarsDiff >= thresholdCars)
+    .filter(s => s.carsDiff < 0 && s.absDeviation >= thresholdRate && s.absCarsDiff >= thresholdCars)
     .sort((a, b) => b.absCarsDiff - a.absCarsDiff);
 
   // Flag top ONE in each direction (not top two overall)

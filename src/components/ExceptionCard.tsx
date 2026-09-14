@@ -24,6 +24,12 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
 
   const actionText = site.actionText || (isAbove ? "Filling faster than usual." : "More space available than usual.");
 
+  const devAdjusted = site.deviationAdjusted ?? site.deviationPercent;
+  const devRaw = site.deviationRaw ?? devAdjusted;
+  const adjustedStr = (devAdjusted > 0 ? "+" : "") + `${devAdjusted}%`;
+  const rawStr = (devRaw > 0 ? "+" : "") + `${devRaw}%`;
+  const isAdjustedDifferent = site.rainFactor !== undefined && site.rainFactor < 1.0 && devRaw !== devAdjusted;
+
   return (
     <div
       id={`carpark-card-${site.id}`}
@@ -71,25 +77,32 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
 
         {/* HEADLINE: Lots affected figure with percentage as supporting text */}
         <div className="bg-stone-50/90 rounded-lg p-4 border border-stone-200/80 mb-4">
-          <div className="flex items-baseline justify-between gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div className="font-mono text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900 tabular-nums">
               {headline}
             </div>
             <div
-              className={`flex items-center gap-0.5 font-mono text-lg font-bold tabular-nums ${
+              className={`flex items-baseline gap-1.5 font-mono text-lg font-bold tabular-nums ${
                 isAbove ? "text-amber-800" : "text-sky-800"
               }`}
             >
-              {isAbove ? (
-                <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
-              ) : (
-                <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
+              <span className="inline-flex items-center gap-0.5">
+                {isAbove ? (
+                  <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
+                ) : (
+                  <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
+                )}
+                <span>{adjustedStr}</span>
+              </span>
+              {isAdjustedDifferent && (
+                <span className="text-stone-400 font-normal text-xs sm:text-sm">
+                  · {rawStr} unadjusted
+                </span>
               )}
-              <span>{site.deviationSignedStr}</span>
             </div>
           </div>
           <div className="text-xs text-stone-500 font-mono mt-1">
-            vs adjusted baseline ({Math.round(expectedOccupancyRate * 100)}% expected, {expectedLotsOccupied.toLocaleString()} cars)
+            vs {isAdjustedDifferent ? "adjusted baseline" : "baseline"} ({Math.round(expectedOccupancyRate * 100)}% expected, {expectedLotsOccupied.toLocaleString()} cars)
           </div>
 
           {/* Weather Discount Callout: Highlights the exact weather use case */}
@@ -110,7 +123,7 @@ export function ExceptionCard({ site, columnType }: ExceptionCardProps) {
 
         {/* Observation plain sentence */}
         <p className="text-stone-700 text-sm leading-relaxed mb-4">
-          {site.plainSentence}.
+          {site.plainSentence.endsWith(".") ? site.plainSentence : `${site.plainSentence}.`}
         </p>
 
         {/* Supporting details: lots & occupancy */}

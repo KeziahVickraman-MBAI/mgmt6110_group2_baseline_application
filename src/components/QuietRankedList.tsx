@@ -80,6 +80,12 @@ export function QuietRankedList({
                   ? `${carsDiff.toLocaleString()} cars` 
                   : "0 cars";
 
+              const devAdjusted = site.deviationAdjusted ?? site.deviationPercent;
+              const devRaw = site.deviationRaw ?? devAdjusted;
+              const adjustedStr = (devAdjusted > 0 ? "+" : "") + `${devAdjusted}%`;
+              const rawStr = (devRaw > 0 ? "+" : "") + `${devRaw}%`;
+              const hasAdjustment = site.rainFactor !== undefined && site.rainFactor < 1.0 && devRaw !== devAdjusted;
+
               return (
                 <tr
                   key={site.id}
@@ -122,8 +128,13 @@ export function QuietRankedList({
                   </td>
                   <td className="py-2.5 px-3.5 text-right font-mono tabular-nums font-semibold">
                     <span className={isDeficit ? "text-sky-800" : "text-amber-800"}>
-                      {site.deviationSignedStr}
+                      {adjustedStr}
                     </span>
+                    {hasAdjustment && (
+                      <span className="text-stone-400 font-normal text-[11px] block">
+                        {rawStr} unadj.
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

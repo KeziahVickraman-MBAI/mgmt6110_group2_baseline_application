@@ -23,6 +23,10 @@ export interface EvaluatedSite {
   actualOccupancyRate: number;
   expectedOccupancyRate: number;
   baselineOccupancyRate: number;
+  expectedRaw?: number;
+  expectedAdjusted?: number;
+  deviationRaw?: number;
+  deviationAdjusted?: number;
   observedOn?: string;
   rainFactor: number;
   nearestAreaName: string | null;

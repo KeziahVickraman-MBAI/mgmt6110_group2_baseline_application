@@ -9,6 +9,7 @@ import { LoadingView, EmptyView, RefusedView, UnreachableView, MiscalibratedView
 import { NotifyForm } from "./components/NotifyForm";
 import { CarparkSearch } from "./components/CarparkSearch";
 import { UserStatementBanner } from "./components/UserStatementBanner";
+import { ComputationTransparency } from "./components/ComputationTransparency";
 import { Footer } from "./components/Footer";
 import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
 
@@ -340,6 +341,19 @@ export default function App() {
               omittedSites={data.omittedDueToNoBaseline}
             />
           </>
+        )}
+
+        {/* How this is computed block beneath the board */}
+        {data && (boardState === "flagged" || boardState === "empty" || boardState === "miscalibrated") && (
+          <ComputationTransparency
+            allSites={[
+              ...(data.topAbove ? [data.topAbove] : []),
+              ...(data.topBelow ? [data.topBelow] : []),
+              ...data.quietList
+            ]}
+            readingTimestamp={data.readingTimestamp}
+            timeContext={data.timeContext}
+          />
         )}
 
         {/* Notify Form Below the Board */}

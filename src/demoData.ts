@@ -20,6 +20,33 @@ const SITE_COORDS: Record<string, { lat: number; lng: number; area: string; near
   "14": { lat: 1.3018, lng: 103.9052, area: "Marine Parade", nearestArea: "Marine Parade", distKm: 1.7 }
 };
 
+function enrichSite(s: EvaluatedSite): EvaluatedSite {
+  const rainFactor = typeof s.rainFactor === "number" && !isNaN(s.rainFactor) ? s.rainFactor : 1.00;
+  const baselineRate = typeof s.baselineOccupancyRate === "number" ? s.baselineOccupancyRate : (s.expectedOccupancyRate || 0.80);
+  const expectedRaw = typeof s.expectedRaw === "number" ? s.expectedRaw : Math.round((1 - baselineRate) * s.totalLots);
+  const expectedAdjusted = typeof s.expectedAdjusted === "number" ? s.expectedAdjusted : Math.round(expectedRaw * rainFactor);
+  const deviationRaw = typeof s.deviationRaw === "number" ? s.deviationRaw : (expectedRaw > 0 ? Math.round(((s.lotsAvailable - expectedRaw) / expectedRaw) * 100) : 0);
+  const deviationAdjusted = typeof s.deviationAdjusted === "number" ? s.deviationAdjusted : (expectedAdjusted > 0 ? Math.round(((s.lotsAvailable - expectedAdjusted) / expectedAdjusted) * 100) : 0);
+  return {
+    ...s,
+    rainFactor,
+    expectedRaw,
+    expectedAdjusted,
+    deviationRaw,
+    deviationAdjusted
+  };
+}
+
+function formatResponse(resp: DeviationsResponse): DeviationsResponse {
+  return {
+    ...resp,
+    topAbove: resp.topAbove ? enrichSite(resp.topAbove) : null,
+    topBelow: resp.topBelow ? enrichSite(resp.topBelow) : null,
+    flaggedExceptions: resp.flaggedExceptions.map(enrichSite),
+    quietList: resp.quietList.map(enrichSite)
+  };
+}
+
 export function getScenarioData(
   scenario: "flagged" | "rain-adjusted" | "empty" | "stale" | "weather-degraded" | "miscalibrated"
 ): DeviationsResponse {
@@ -28,7 +55,7 @@ export function getScenarioData(
 
   // 1. MISCALIBRATED SANITY CHECK SCENARIO
   if (scenario === "miscalibrated") {
-    return {
+    return formatResponse({
       readingTimestamp: baseTimestamp,
       minutesOld: 1,
       isStale: false,
@@ -91,12 +118,12 @@ export function getScenarioData(
         unmatchedForecastStrings: []
       },
       lastGoodReadingTimestamp: baseTimestamp
-    };
+    });
   }
 
   // 2. EMPTY STATE SCENARIO (Nothing needs a floater right now)
   if (scenario === "empty") {
-    return {
+    return formatResponse({
       readingTimestamp: baseTimestamp,
       minutesOld: 2,
       isStale: false,
@@ -240,7 +267,7 @@ export function getScenarioData(
         unmatchedForecastStrings: []
       },
       lastGoodReadingTimestamp: baseTimestamp
-    };
+    });
   }
 
   // 3. FLAGGED / RAIN-ADJUSTED / STALE / WEATHER-DEGRADED SCENARIOS
@@ -249,76 +276,83 @@ export function getScenarioData(
   const isRainAdjusted = scenario === "rain-adjusted";
 
   // Top Above (Needs Attention): Suntec City
-  // Under rain-adjusted, baseline drops from 88% down to 77% (0.88x rain factor), so Suntec is even more heavily off-pattern!
+  // Under rain-adjusted, baseline drops with rain factor, so Suntec is even more heavily off-pattern!
   const topAbove: EvaluatedSite = {
     id: "1",
     development: "Suntec City",
     area: "Marina",
-    lotsAvailable: isRainAdjusted ? 155 : 110,
-    totalLots: 3100,
-    actualLotsOccupied: isRainAdjusted ? 2945 : 2990,
-    expectedLotsOccupied: isRainAdjusted ? 2387 : 2720,
-    carsDiff: isRainAdjusted ? 558 : 270,
-    absCarsDiff: isRainAdjusted ? 558 : 270,
-    carsHeadline: isRainAdjusted ? "558 cars above rain-adjusted baseline" : "270 cars above normal",
-    actionText: "Send someone.",
+    lotsAvailable: isRainAdjusted ? 373 : 373,
+    totalLots: 3060,
+    actualLotsOccupied: 2687,
+    expectedLotsOccupied: isRainAdjusted ? 2521 : 2448,
+    carsDiff: isRainAdjusted ? 166 : 239,
+    absCarsDiff: isRainAdjusted ? 166 : 239,
+    carsHeadline: isRainAdjusted ? "166 cars above rain-adjusted baseline" : "239 cars above normal",
+    actionText: "Filling faster than usual.",
     direction: "above",
-    actualOccupancyRate: isRainAdjusted ? 0.95 : 0.96,
-    expectedOccupancyRate: isRainAdjusted ? 0.77 : 0.88,
-    baselineOccupancyRate: 0.88,
+    actualOccupancyRate: 0.88,
+    expectedOccupancyRate: isRainAdjusted ? 0.82 : 0.80,
+    baselineOccupancyRate: 0.80,
+    expectedRaw: 612,
+    expectedAdjusted: isRainAdjusted ? 539 : 612,
+    deviationRaw: -39,
+    deviationAdjusted: isRainAdjusted ? -31 : -39,
     observedOn: "2026-08-28",
     rainFactor: isRainAdjusted ? 0.88 : 1.0,
     nearestAreaName: "City",
     nearestAreaForecast: isRainAdjusted
-      ? "Heavy Thundery Showers"
+      ? "Heavy Rain"
       : isWeatherDegraded
       ? "Thundery Showers"
-      : "Fair (Night)",
-    distanceKm: 1.5,
-    deviation: isRainAdjusted ? 0.23 : 0.10,
-    deviationPercent: isRainAdjusted ? 23 : 10,
-    deviationSignedStr: isRainAdjusted ? "+23%" : "+10%",
-    absDeviation: isRainAdjusted ? 0.23 : 0.10,
+      : "Clear",
+    distanceKm: 1.48,
+    deviation: isRainAdjusted ? -0.31 : -0.39,
+    deviationPercent: isRainAdjusted ? -31 : -39,
+    deviationSignedStr: isRainAdjusted ? "-31%" : "-39%",
+    absDeviation: isRainAdjusted ? 0.31 : 0.39,
     plainSentence: isRainAdjusted
-      ? "running 23% above its usual Sunday evening occupancy, adjusted for heavy thundery showers in City (1.5km)"
-      : "running 10% above its usual Sunday evening occupancy",
+      ? "running 31% below its usual weekday afternoon availability, after lowering the expectation 12% for heavy rain in City"
+      : "running 39% below its usual weekday afternoon availability. No weather adjustment — clear in City",
     isFull: false
   };
 
   // Top Below (Has Capacity): Raffles City
-  // Under rain-adjusted, expected baseline is 73% (0.83 * 0.88)
   const topBelow: EvaluatedSite = {
     id: "3",
     development: "Raffles City",
     area: "City",
-    lotsAvailable: isRainAdjusted ? 525 : 420,
+    lotsAvailable: isRainAdjusted ? 525 : 525,
     totalLots: 1050,
-    actualLotsOccupied: isRainAdjusted ? 525 : 630,
-    expectedLotsOccupied: isRainAdjusted ? 767 : 870,
-    carsDiff: isRainAdjusted ? -242 : -240,
-    absCarsDiff: isRainAdjusted ? 242 : 240,
-    carsHeadline: isRainAdjusted ? "242 cars below rain-adjusted baseline" : "240 cars below normal",
-    actionText: "Floater available here.",
+    actualLotsOccupied: 525,
+    expectedLotsOccupied: isRainAdjusted ? 892 : 871,
+    carsDiff: isRainAdjusted ? -367 : -346,
+    absCarsDiff: isRainAdjusted ? 367 : 346,
+    carsHeadline: isRainAdjusted ? "367 cars below rain-adjusted baseline" : "346 cars below normal",
+    actionText: "More capacity available than usual.",
     direction: "below",
-    actualOccupancyRate: isRainAdjusted ? 0.50 : 0.60,
-    expectedOccupancyRate: isRainAdjusted ? 0.73 : 0.83,
+    actualOccupancyRate: 0.50,
+    expectedOccupancyRate: isRainAdjusted ? 0.85 : 0.83,
     baselineOccupancyRate: 0.83,
+    expectedRaw: 179,
+    expectedAdjusted: isRainAdjusted ? 158 : 179,
+    deviationRaw: 193,
+    deviationAdjusted: isRainAdjusted ? 232 : 193,
     observedOn: "2026-08-28",
     rainFactor: isRainAdjusted ? 0.88 : 1.0,
     nearestAreaName: "City",
     nearestAreaForecast: isRainAdjusted
-      ? "Heavy Thundery Showers"
+      ? "Heavy Rain"
       : isWeatherDegraded
       ? "Thundery Showers"
-      : "Fair (Night)",
+      : "Clear",
     distanceKm: 1.0,
-    deviation: isRainAdjusted ? -0.32 : -0.28,
-    deviationPercent: isRainAdjusted ? -32 : -28,
-    deviationSignedStr: isRainAdjusted ? "-32%" : "-28%",
-    absDeviation: isRainAdjusted ? 0.32 : 0.28,
+    deviation: isRainAdjusted ? 2.32 : 1.93,
+    deviationPercent: isRainAdjusted ? 232 : 193,
+    deviationSignedStr: isRainAdjusted ? "+232%" : "+193%",
+    absDeviation: isRainAdjusted ? 2.32 : 1.93,
     plainSentence: isRainAdjusted
-      ? "running 32% below its usual Sunday evening occupancy, adjusted for heavy thundery showers in City (1.0km)"
-      : "running 28% below its usual Sunday evening occupancy",
+      ? "running 232% above its usual weekday afternoon availability, after lowering the expectation 12% for heavy rain in City"
+      : "running 193% above its usual weekday afternoon availability. No weather adjustment — clear in City",
     isFull: false
   };
 
@@ -341,7 +375,7 @@ export function getScenarioData(
     ? "Heavy Thundery Showers in City (-12% demand discount). Suntec City is still running hot (+558 cars); Raffles City has surplus capacity (-242 cars)."
     : "Redeploy floater from Raffles City to Suntec City (0.5 km — single trip). Queues forming at Suntec; excess capacity at Raffles City.";
 
-  return {
+  return formatResponse({
     readingTimestamp: isStale ? oldTimestamp : baseTimestamp,
     minutesOld: isStale ? 22 : 3,
     isStale,
@@ -672,5 +706,5 @@ export function getScenarioData(
       unmatchedForecastStrings: []
     },
     lastGoodReadingTimestamp: baseTimestamp
-  };
+  });
 }
