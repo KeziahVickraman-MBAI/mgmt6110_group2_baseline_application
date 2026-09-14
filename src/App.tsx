@@ -11,7 +11,7 @@ import { CarparkSearch } from "./components/CarparkSearch";
 import { UserStatementBanner } from "./components/UserStatementBanner";
 import { ComputationTransparency } from "./components/ComputationTransparency";
 import { Footer } from "./components/Footer";
-import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle } from "lucide-react";
+import { Radio, Layers, Compass, CheckCircle2, UserCheck, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function App() {
   const [feedMode, setFeedMode] = useState<"live" | "simulated">("live");
@@ -20,6 +20,7 @@ export default function App() {
   const [boardState, setBoardState] = useState<BoardState>("loading");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastGoodReadingTime, setLastGoodReadingTime] = useState<string | null>(null);
+  const [isExceptionsExpanded, setIsExceptionsExpanded] = useState<boolean>(true);
 
   const loadData = useCallback(async (isManualRefresh = false) => {
     setIsRefreshing(true);
@@ -235,6 +236,7 @@ export default function App() {
               missingSites={data.missingSites}
               corruptedSites={data.corruptedSites}
               omittedSites={data.omittedDueToNoBaseline}
+              defaultExpanded={true}
             />
           </>
         )}
@@ -248,6 +250,7 @@ export default function App() {
               missingSites={data.missingSites}
               corruptedSites={data.corruptedSites}
               omittedSites={data.omittedDueToNoBaseline}
+              defaultExpanded={true}
             />
           </>
         )}
@@ -276,69 +279,86 @@ export default function App() {
               )}
             </div>
 
-            {/* A. Two columns split by direction */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Column 1: Needs attention (furthest ABOVE baseline) */}
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between gap-2 mb-3 px-1">
+            {/* A. Collapsible Notable Exceptions (Shows 2 if both available, or just the 1; no placeholder if not relevant) */}
+            {(data.topAbove || data.topBelow) && (
+              <div id="flagged-exceptions-section" className="mb-8">
+                <div className="flex items-center justify-between gap-3 mb-3 px-1">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
-                    <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
-                      Filling Faster Than Usual
-                    </h2>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-700 font-mono">
+                      Notable Exceptions ({data.topAbove && data.topBelow ? "2 sites" : "1 site"})
+                    </span>
+                    <span className="text-xs text-stone-500">
+                      {data.topAbove && data.topBelow
+                        ? "Above normal & Below normal"
+                        : data.topAbove
+                        ? "Above normal baseline"
+                        : "Below normal baseline"}
+                    </span>
                   </div>
-                  <span className="text-xs text-stone-500 font-medium">
-                    Above normal baseline
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsExceptionsExpanded(!isExceptionsExpanded)}
+                    aria-expanded={isExceptionsExpanded}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-white border border-stone-200 hover:border-stone-300 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <span>{isExceptionsExpanded ? "Collapse exceptions" : "Expand exceptions"}</span>
+                    {isExceptionsExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-stone-500" />
+                    )}
+                  </button>
                 </div>
 
-                {data.topAbove ? (
-                  <ExceptionCard site={data.topAbove} columnType="needs-attention" />
-                ) : (
-                  <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
-                    <CheckCircle2 className="w-8 h-8 text-stone-400 mb-2" />
-                    <p className="text-stone-700 font-medium text-sm">No unusual demand</p>
-                    <p className="text-stone-500 text-xs mt-1">
-                      No carparks running significantly above normal baseline.
-                    </p>
+                {isExceptionsExpanded && (
+                  <div className={data.topAbove && data.topBelow ? "grid grid-cols-1 md:grid-cols-2 gap-6" : "grid grid-cols-1 gap-6 max-w-2xl"}>
+                    {/* Column 1: Needs attention (furthest ABOVE baseline) - only if relevant */}
+                    {data.topAbove && (
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between gap-2 mb-3 px-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-amber-500 ring-4 ring-amber-100"></span>
+                            <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
+                              Filling Faster Than Usual
+                            </h2>
+                          </div>
+                          <span className="text-xs text-stone-500 font-medium">
+                            Above normal baseline
+                          </span>
+                        </div>
+                        <ExceptionCard site={data.topAbove} columnType="needs-attention" />
+                      </div>
+                    )}
+
+                    {/* Column 2: Has capacity (furthest BELOW baseline) - only if relevant */}
+                    {data.topBelow && (
+                      <div className="flex flex-col">
+                        <div className="flex items-center justify-between gap-2 mb-3 px-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-100"></span>
+                            <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
+                              More Space Than Usual
+                            </h2>
+                          </div>
+                          <span className="text-xs text-stone-500 font-medium">
+                            Below normal baseline
+                          </span>
+                        </div>
+                        <ExceptionCard site={data.topBelow} columnType="has-capacity" />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Column 2: Has capacity (furthest BELOW baseline) */}
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between gap-2 mb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-100"></span>
-                    <h2 className="text-base font-bold text-stone-900 uppercase tracking-wide">
-                      More Space Than Usual
-                    </h2>
-                  </div>
-                  <span className="text-xs text-stone-500 font-medium">
-                    Below normal baseline
-                  </span>
-                </div>
-
-                {data.topBelow ? (
-                  <ExceptionCard site={data.topBelow} columnType="has-capacity" />
-                ) : (
-                  <div className="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center flex-1 flex flex-col justify-center items-center">
-                    <UserCheck className="w-8 h-8 text-stone-400 mb-2" />
-                    <p className="text-stone-700 font-medium text-sm">Normal occupancy</p>
-                    <p className="text-stone-500 text-xs mt-1">
-                      All sites are operating at or near normal baseline.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quiet Ranked List Beneath */}
+            {/* Quiet Ranked List Beneath - Fully Printed */}
             <QuietRankedList
               quietList={data.quietList}
               missingSites={data.missingSites}
               corruptedSites={data.corruptedSites}
               omittedSites={data.omittedDueToNoBaseline}
+              defaultExpanded={true}
             />
           </>
         )}

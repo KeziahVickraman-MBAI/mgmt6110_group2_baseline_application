@@ -15,7 +15,7 @@ export function QuietRankedList({
   missingSites,
   corruptedSites = [],
   omittedSites,
-  defaultExpanded = false
+  defaultExpanded = true
 }: QuietRankedListProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const totalCount = quietList.length + missingSites.length + corruptedSites.length + (omittedSites?.length || 0);
